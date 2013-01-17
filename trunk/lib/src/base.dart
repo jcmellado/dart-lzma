@@ -29,10 +29,10 @@ References:
 part of lzma;
 
 class Base {
-  static final int kNumRepDistances = 4;
-  static final int kNumStates = 12;
+  static const int kNumRepDistances = 4;
+  static const int kNumStates = 12;
 
-  static int stateInit() => 0;
+  static const stateInit = 0;
 
   static int stateUpdateChar(int index) =>
       index < 4 ? 0 : (index < 10 ? index - 3 : index - 6);
@@ -45,41 +45,41 @@ class Base {
 
   static bool stateIsCharState(int index) => index < 7;
 
-  static final int kNumPosSlotBits = 6;
-  static final int kDicLogSizeMin = 0;
+  static const int kNumPosSlotBits = 6;
+  static const int kDicLogSizeMin = 0;
 
-  static final int kNumLenToPosStatesBits = 2;
-  static final int kNumLenToPosStates = 1 << kNumLenToPosStatesBits;
+  static const int kNumLenToPosStatesBits = 2;
+  static const int kNumLenToPosStates = 1 << kNumLenToPosStatesBits;
 
-  static final int kMatchMinLen = 2;
+  static const int kMatchMinLen = 2;
 
   static int getLenToPosState(int len) =>
      len - kMatchMinLen < kNumLenToPosStates ? len - kMatchMinLen : kNumLenToPosStates - 1;
 
-  static final int kNumAlignBits = 4;
-  static final int kAlignTableSize = 1 << kNumAlignBits;
-  static final int kAlignMask = kAlignTableSize - 1;
+  static const int kNumAlignBits = 4;
+  static const int kAlignTableSize = 1 << kNumAlignBits;
+  static const int kAlignMask = kAlignTableSize - 1;
 
-  static final int kStartPosModelIndex = 4;
-  static final int kEndPosModelIndex = 14;
+  static const int kStartPosModelIndex = 4;
+  static const int kEndPosModelIndex = 14;
 
-  static final int kNumFullDistances = 1 << (kEndPosModelIndex >> 1);
+  static const int kNumFullDistances = 1 << (kEndPosModelIndex >> 1);
 
-  static final int kNumLitPosStatesBitsEncodingMax = 4;
-  static final int kNumLitContextBitsMax = 8;
+  static const int kNumLitPosStatesBitsEncodingMax = 4;
+  static const int kNumLitContextBitsMax = 8;
 
-  static final int kNumPosStatesBitsMax = 4;
-  static final int kNumPosStatesMax = 1 << kNumPosStatesBitsMax;
-  static final int kNumPosStatesBitsEncodingMax = 4;
-  static final int kNumPosStatesEncodingMax = 1 << kNumPosStatesBitsEncodingMax;
+  static const int kNumPosStatesBitsMax = 4;
+  static const int kNumPosStatesMax = 1 << kNumPosStatesBitsMax;
+  static const int kNumPosStatesBitsEncodingMax = 4;
+  static const int kNumPosStatesEncodingMax = 1 << kNumPosStatesBitsEncodingMax;
 
-  static final int kNumLowLenBits = 3;
-  static final int kNumMidLenBits = 3;
-  static final int kNumHighLenBits = 8;
-  static final int kNumLowLenSymbols = 1 << kNumLowLenBits;
-  static final int kNumMidLenSymbols = 1 << kNumMidLenBits;
-  static final int kNumLenSymbols =
+  static const int kNumLowLenBits = 3;
+  static const int kNumMidLenBits = 3;
+  static const int kNumHighLenBits = 8;
+  static const int kNumLowLenSymbols = 1 << kNumLowLenBits;
+  static const int kNumMidLenSymbols = 1 << kNumMidLenBits;
+  static const int kNumLenSymbols =
       kNumLowLenSymbols + kNumMidLenSymbols + (1 << kNumHighLenBits);
 
-  static final int kMatchMaxLen = kMatchMinLen + kNumLenSymbols - 1;
+  static const int kMatchMaxLen = kMatchMinLen + kNumLenSymbols - 1;
 }

@@ -22,7 +22,7 @@ name: lzma
 version: 0.1.0
 author: Juan Mellado <jcmellado@gmail.com>
 homepage: http://code.google.com/p/dart-lzma/
-description: LZMA
+description: LZMA compression library for Dart.
 
 #dependencies:
 #  fixnum: any
