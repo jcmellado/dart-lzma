@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 name: lzma
-version: 0.1.0
+version: 0.1.1
 author: Juan Mellado <jcmellado@gmail.com>
 homepage: http://code.google.com/p/dart-lzma/
 description: LZMA compression library for Dart.
