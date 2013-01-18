@@ -1,8 +1,8 @@
-<font color="red">**BETA**</font>
+**BETA**
 
 **dart-lzma** is a port of LZMA compression algorithm to Dart.
 
-The source code is a manual translation from the original Java version found on the <a href="http://www.7-zip.org/sdk.html">LZMA SDK</a>.
+The source code is a manual translation from the original Java version found on the [LZMA SDK](http://www.7-zip.org/sdk.html).
 
 ## How to use? 
 
@@ -24,7 +24,7 @@ If you want to decompress data then just call to the `decompress` function:
 ```
 import "package:lzma/lzma.dart" as LZMA;
 
-var input = new LZMA.InStream(<PUT YOUR LZMA BUFFER DATA HERE>);
+var input = new LZMA.InStream(<PUT YOUR LZMA DATA BUFFER HERE>);
 var output = new LZMA.OutStream();
 
 LZMA.decompress(input, output);
@@ -53,7 +53,7 @@ void main() {
   var options = new Options();
 
   if (options.arguments.length != 2) {
-    print("Usage: compress input output");
+    print("Usage: compress input output.lzma");
     return;
   }
 
@@ -76,7 +76,7 @@ void main() {
   var options = new Options();
 
   if (options.arguments.length != 2) {
-    print("Usage: decompress input output");
+    print("Usage: decompress input.lzma output");
     return;
   }
 
@@ -91,6 +91,10 @@ void main() {
   outFile.writeAsBytesSync(output.data);
 }
 ```
+
+## Performance
+
+Be sure to run the library in production mode (not checked mode) with debugging disabled.
 
 ## Limitations
 
