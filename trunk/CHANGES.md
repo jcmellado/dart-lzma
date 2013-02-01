@@ -1,4 +1,8 @@
 
+#### 0.1.2 - Feb 01, 2013
+
+  * Pre-M3 update
+
 #### 0.1.1 - Jan 18, 2013
 
   * Fixed some README.md tags

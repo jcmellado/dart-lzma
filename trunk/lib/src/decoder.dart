@@ -31,7 +31,7 @@ part of lzma;
 bool decompress(InStream inStream, OutStream outStream) {
   const propertiesSize = 5;
 
-  var properties = new List<int>(propertiesSize);
+  var properties = new List<int>.fixedLength(propertiesSize);
   if (inStream.readBlock(properties, 0, propertiesSize) != propertiesSize) {
     throw new Exception("Input .lzma file is too short");
   }
@@ -58,9 +58,9 @@ bool decompress(InStream inStream, OutStream outStream) {
 }
 
 class LenDecoder {
-  final List<int> _choice = new List<int>(2);
-  final List<BitTreeDecoder> _lowCoder = new List<BitTreeDecoder>(Base.kNumPosStatesMax);
-  final List<BitTreeDecoder> _midCoder = new List<BitTreeDecoder>(Base.kNumPosStatesMax);
+  final List<int> _choice = new List<int>.fixedLength(2);
+  final List<BitTreeDecoder> _lowCoder = new List<BitTreeDecoder>.fixedLength(Base.kNumPosStatesMax);
+  final List<BitTreeDecoder> _midCoder = new List<BitTreeDecoder>.fixedLength(Base.kNumPosStatesMax);
   final BitTreeDecoder _highCoder = new BitTreeDecoder(Base.kNumHighLenBits);
   int _numPosStates = 0;
 
@@ -96,7 +96,7 @@ class LenDecoder {
 }
 
 class Decoder2 {
-  final List<int> _decoders = new List<int>(0x300);
+  final List<int> _decoders = new List<int>.fixedLength(0x300);
 
   void init() {
     RangeDecoder.initBitModels(_decoders);
@@ -150,7 +150,7 @@ class LiteralDecoder {
     _numPrevBits = numPrevBits;
 
     var numStates = 1 << (_numPrevBits + _numPosBits);
-    _coders = new List<Decoder2>(numStates);
+    _coders = new List<Decoder2>.fixedLength(numStates);
 
     for (var i = 0; i < numStates; ++ i) {
       _coders[i] = new Decoder2();
@@ -172,15 +172,15 @@ class Decoder {
   final OutWindow _outWindow = new OutWindow();
   final RangeDecoder _rangeDecoder = new RangeDecoder();
 
-  final List<int> _isMatchDecoders = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
-  final List<int> _isRepDecoders = new List<int>(Base.kNumStates);
-  final List<int> _isRepG0Decoders = new List<int>(Base.kNumStates);
-  final List<int> _isRepG1Decoders = new List<int>(Base.kNumStates);
-  final List<int> _isRepG2Decoders = new List<int>(Base.kNumStates);
-  final List<int> _isRep0LongDecoders = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
+  final List<int> _isMatchDecoders = new List<int>.fixedLength(Base.kNumStates << Base.kNumPosStatesBitsMax);
+  final List<int> _isRepDecoders = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRepG0Decoders = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRepG1Decoders = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRepG2Decoders = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRep0LongDecoders = new List<int>.fixedLength(Base.kNumStates << Base.kNumPosStatesBitsMax);
 
-  final List<BitTreeDecoder> _posSlotDecoder = new List<BitTreeDecoder>(Base.kNumLenToPosStates);
-  final List<int> _posDecoders = new List<int>(Base.kNumFullDistances - Base.kEndPosModelIndex);
+  final List<BitTreeDecoder> _posSlotDecoder = new List<BitTreeDecoder>.fixedLength(Base.kNumLenToPosStates);
+  final List<int> _posDecoders = new List<int>.fixedLength(Base.kNumFullDistances - Base.kEndPosModelIndex);
 
   final BitTreeDecoder _posAlignDecoder = new BitTreeDecoder(Base.kNumAlignBits);
 

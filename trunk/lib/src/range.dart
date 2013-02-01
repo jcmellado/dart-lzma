@@ -213,7 +213,7 @@ class RangeEncoder {
   static List<int> _probPrices = _buildProbPrices();
 
   static List<int> _buildProbPrices() {
-    var probPrices = new List<int>(_kBitModelTotal >> _kNumMoveReducingBits);
+    var probPrices = new List<int>.fixedLength(_kBitModelTotal >> _kNumMoveReducingBits);
 
     probPrices[0] = 0;
 
@@ -247,7 +247,7 @@ class BitTreeDecoder {
 
   BitTreeDecoder(int numBitLevels)
     : _numBitLevels = numBitLevels,
-      _models = new List<int>(1 << numBitLevels);
+      _models = new List<int>.fixedLength(1 << numBitLevels);
 
   void init() {
     RangeDecoder.initBitModels(_models);
@@ -289,7 +289,7 @@ class BitTreeEncoder {
 
   BitTreeEncoder(int numBitLevels)
     : _numBitLevels = numBitLevels,
-      _models = new List(1 << numBitLevels);
+      _models = new List.fixedLength(1 << numBitLevels);
 
   void init() {
     RangeDecoder.initBitModels(_models);

@@ -70,7 +70,7 @@ void compress(InStream inStream, OutStream outStream, [Params params]) {
 }
 
 class Encoder2 {
-  final List<int> _encoders = new List<int>(0x300);
+  final List<int> _encoders = new List<int>.fixedLength(0x300);
 
   void init() {
     RangeEncoder.initBitModels(_encoders);
@@ -140,7 +140,7 @@ class LiteralEncoder {
     _pPosMask = (1 << numPosBits) - 1;
     _numPrevBits = numPrevBits;
     var numStates = 1 << (_numPrevBits + _numPosBits);
-    _coders = new List<Encoder2>(numStates);
+    _coders = new List<Encoder2>.fixedLength(numStates);
     for (var i = 0; i < numStates; ++ i) {
       _coders[i] = new Encoder2();
     }
@@ -158,9 +158,9 @@ class LiteralEncoder {
 }
 
 class LenEncoder {
-  final List<int> _choice = new List<int>(2);
-  final List<BitTreeEncoder> _lowCoder = new List<BitTreeEncoder>(Base.kNumPosStatesEncodingMax);
-  final List<BitTreeEncoder> _midCoder = new List<BitTreeEncoder>(Base.kNumPosStatesEncodingMax);
+  final List<int> _choice = new List<int>.fixedLength(2);
+  final List<BitTreeEncoder> _lowCoder = new List<BitTreeEncoder>.fixedLength(Base.kNumPosStatesEncodingMax);
+  final List<BitTreeEncoder> _midCoder = new List<BitTreeEncoder>.fixedLength(Base.kNumPosStatesEncodingMax);
   final BitTreeEncoder _highCoder = new BitTreeEncoder(Base.kNumHighLenBits);
 
   LenEncoder() {
@@ -222,9 +222,9 @@ class LenEncoder {
 }
 
 class LenPriceTableEncoder extends LenEncoder {
-  final List<int> _prices = new List<int>(Base.kNumLenSymbols<<Base.kNumPosStatesBitsEncodingMax);
+  final List<int> _prices = new List<int>.fixedLength(Base.kNumLenSymbols<<Base.kNumPosStatesBitsEncodingMax);
   int _tableSize;
-  final List<int> _counters = new List<int>(Base.kNumPosStatesEncodingMax);
+  final List<int> _counters = new List<int>.fixedLength(Base.kNumPosStatesEncodingMax);
 
   void setTableSize(int tableSize) {
     _tableSize = tableSize;
@@ -292,7 +292,7 @@ class Encoder {
   static List<int> _fastPos = _buildFastPos();
 
   static List<int> _buildFastPos() {
-    var fastPos = new List<int>(0x800);
+    var fastPos = new List<int>.fixedLength(0x800);
 
     var kFastSlots = 22;
     var c = 2;
@@ -330,7 +330,7 @@ class Encoder {
 
   int _state = Base.stateInit;
   int _previousByte;
-  final List<int> _repDistances = new List<int>(Base.kNumRepDistances);
+  final List<int> _repDistances = new List<int>.fixedLength(Base.kNumRepDistances);
 
   void _baseInit() {
     _state = Base.stateInit;
@@ -345,20 +345,20 @@ class Encoder {
 
   static const int _kNumOpts = 0x1000;
 
-  final List<Optimal> _optimum = new List<Optimal>(_kNumOpts);
+  final List<Optimal> _optimum = new List<Optimal>.fixedLength(_kNumOpts);
   BinTree _matchFinder = null;
   final RangeEncoder _rangeEncoder = new RangeEncoder();
 
-  final List<int> _isMatch = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
-  final List<int> _isRep = new List<int>(Base.kNumStates);
-  final List<int> _isRepG0 = new List<int>(Base.kNumStates);
-  final List<int> _isRepG1 = new List<int>(Base.kNumStates);
-  final List<int> _isRepG2 = new List<int>(Base.kNumStates);
-  final List<int> _isRep0Long = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
+  final List<int> _isMatch = new List<int>.fixedLength(Base.kNumStates << Base.kNumPosStatesBitsMax);
+  final List<int> _isRep = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRepG0 = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRepG1 = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRepG2 = new List<int>.fixedLength(Base.kNumStates);
+  final List<int> _isRep0Long = new List<int>.fixedLength(Base.kNumStates << Base.kNumPosStatesBitsMax);
 
-  final List<BitTreeEncoder> _posSlotEncoder = new List<BitTreeEncoder>(Base.kNumLenToPosStates);
+  final List<BitTreeEncoder> _posSlotEncoder = new List<BitTreeEncoder>.fixedLength(Base.kNumLenToPosStates);
 
-  final List<int> _posEncoders = new List<int>(Base.kNumFullDistances - Base.kEndPosModelIndex);
+  final List<int> _posEncoders = new List<int>.fixedLength(Base.kNumFullDistances - Base.kEndPosModelIndex);
   final BitTreeEncoder _posAlignEncoder = new BitTreeEncoder(Base.kNumAlignBits);
 
   final LenPriceTableEncoder _lenEncoder = new LenPriceTableEncoder();
@@ -366,7 +366,7 @@ class Encoder {
 
   final LiteralEncoder _literalEncoder = new LiteralEncoder();
 
-  final List<int> _matchDistances = new List<int>(Base.kMatchMaxLen * 2 + 2);
+  final List<int> _matchDistances = new List<int>.fixedLength(Base.kMatchMaxLen * 2 + 2);
 
   int _numFastBytes = _kNumFastBytesDefault;
   int _longestMatchLength;
@@ -379,9 +379,9 @@ class Encoder {
 
   bool _longestMatchWasFound;
 
-  final List<int> _posSlotPrices = new List<int>(1 << (Base.kNumPosSlotBits + Base.kNumLenToPosStatesBits));
-  final List<int> _distancesPrices = new List<int>(Base.kNumFullDistances << Base.kNumLenToPosStatesBits);
-  final List<int> _alignPrices = new List<int>(Base.kAlignTableSize);
+  final List<int> _posSlotPrices = new List<int>.fixedLength(1 << (Base.kNumPosSlotBits + Base.kNumLenToPosStatesBits));
+  final List<int> _distancesPrices = new List<int>.fixedLength(Base.kNumFullDistances << Base.kNumLenToPosStatesBits);
+  final List<int> _alignPrices = new List<int>.fixedLength(Base.kAlignTableSize);
   int _alignPriceCount;
 
   int _distTableSize = _kDefaultDictionaryLogSize * 2;
@@ -553,8 +553,8 @@ class Encoder {
     return _optimumCurrentIndex;
   }
 
-  final List<int> reps = new List<int>(Base.kNumRepDistances);
-  final List<int> repLens = new List<int>(Base.kNumRepDistances);
+  final List<int> reps = new List<int>.fixedLength(Base.kNumRepDistances);
+  final List<int> repLens = new List<int>.fixedLength(Base.kNumRepDistances);
   int backRes;
 
   int _getOptimum(int position) {
@@ -1216,9 +1216,9 @@ class Encoder {
     _nowPos64 = 0;
   }
 
-  final List<int> processedInSize = new List<int>(1);
-  final List<int> processedOutSize = new List<int>(1);
-  final List<bool> finished = new List<bool>(1);
+  final List<int> processedInSize = new List<int>.fixedLength(1);
+  final List<int> processedOutSize = new List<int>.fixedLength(1);
+  final List<bool> finished = new List<bool>.fixedLength(1);
 
   void code(InStream inStream, OutStream outStream,
       int inSize, int outSize) {
@@ -1241,7 +1241,7 @@ class Encoder {
   void writeCoderProperties(OutStream outStream) {
     final kPropSize = 5;
 
-    var properties = new List<int>(kPropSize);
+    var properties = new List<int>.fixedLength(kPropSize);
 
     properties[0] = ((_posStateBits * 5 + _numLiteralPosStateBits) * 9) + _numLiteralContextBits;
     for (var i = 0; i < 4; ++ i) {
@@ -1251,7 +1251,7 @@ class Encoder {
     outStream.writeBlock(properties, 0, kPropSize);
   }
 
-  final List<int> tempPrices = new List<int>(Base.kNumFullDistances);
+  final List<int> tempPrices = new List<int>.fixedLength(Base.kNumFullDistances);
   int _matchPriceCount;
 
   void _fillDistancesPrices() {
