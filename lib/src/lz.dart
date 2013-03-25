@@ -37,7 +37,7 @@ class OutWindow {
 
   void create(int windowSize) {
     if ((_buffer == null) || (_windowSize != windowSize)) {
-      _buffer = new List<int>.fixedLength(windowSize);
+      _buffer = new List<int>(windowSize);
     }
 
     _windowSize = windowSize;
@@ -178,7 +178,7 @@ class InWindow {
       free();
 
       _blockSize = blockSize;
-      _bufferBase = new List<int>.fixedLength(_blockSize);
+      _bufferBase = new List<int>(_blockSize);
     }
     _pointerToLastSafePosition = _blockSize - keepSizeAfter;
   }
@@ -316,7 +316,7 @@ class BinTree extends InWindow {
     var cyclicBufferSize = historySize + 1;
     if (_cyclicBufferSize != cyclicBufferSize) {
       _cyclicBufferSize = cyclicBufferSize;
-      _son = new List<int>.fixedLength(_cyclicBufferSize * 2);
+      _son = new List<int>(_cyclicBufferSize * 2);
     }
 
     var hs = _kBT2HashSize;
@@ -338,7 +338,7 @@ class BinTree extends InWindow {
 
     if (hs != _hashSizeSum) {
       _hashSizeSum = hs;
-      _hash = new List<int>.fixedLength(_hashSizeSum);
+      _hash = new List<int>(_hashSizeSum);
     }
 
     return true;
@@ -580,7 +580,7 @@ class BinTree extends InWindow {
   static final List<int> _crcTable = _buildCrcTable();
 
   static List<int> _buildCrcTable() {
-    var crcTable = new List<int>.fixedLength(256);
+    var crcTable = new List<int>(256);
 
     for (var i = 0; i < 256; ++ i) {
       var r = i;

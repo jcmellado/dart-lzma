@@ -1,4 +1,10 @@
 
+#### 0.1.3 - Mar 25, 2013
+
+  * Updated fixnum library
+  * Removed deprecated List.fixedLength constructor
+  * Changed List.getRange for sublist
+
 #### 0.1.2 - Feb 01, 2013
 
   * Pre-M3 update
