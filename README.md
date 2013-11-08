@@ -1,10 +1,8 @@
-**BETA**
-
 **dart-lzma** is a port of LZMA compression algorithm to Dart.
 
 The source code is a manual translation from the original Java version found on the [LZMA SDK](http://www.7-zip.org/sdk.html).
 
-## How to use? 
+## How to use?
 
 If you want to compress data then just call to the `compress` function:
 
@@ -13,7 +11,6 @@ import "package:lzma/lzma.dart" as LZMA;
 
 var input = new LZMA.InStream(<PUT YOUR DATA BUFFER HERE>);
 var output = new LZMA.OutStream();
-
 LZMA.compress(input, output);
 
 //output.data has now your compressed data
@@ -26,7 +23,6 @@ import "package:lzma/lzma.dart" as LZMA;
 
 var input = new LZMA.InStream(<PUT YOUR LZMA DATA BUFFER HERE>);
 var output = new LZMA.OutStream();
-
 LZMA.decompress(input, output);
 
 //output.data has now your uncompressed data
@@ -49,16 +45,14 @@ Compress a file and write the result to another one:
 import "dart:io";
 import "package:lzma/lzma.dart" as LZMA;
 
-void main() {
-  var options = new Options();
-
-  if (options.arguments.length != 2) {
-    print("Usage: compress input output.lzma");
+void main(List<String> args) {
+  if (args.length != 2) {
+    print("Usage: compress input output");
     return;
   }
 
-  var inFile = new File(options.arguments[0]);
-  var outFile = new File(options.arguments[1]);
+  var inFile = new File(args[0]);
+  var outFile = new File(args[1]);
 
   var input = new LZMA.InStream(inFile.readAsBytesSync());
   var output = new LZMA.OutStream();
@@ -72,16 +66,17 @@ void main() {
 Decompress a file and write the result to another one:
 
 ```
-void main() {
-  var options = new Options();
+import "dart:io";
+import "package:lzma/lzma.dart" as LZMA;
 
-  if (options.arguments.length != 2) {
-    print("Usage: decompress input.lzma output");
+void main(List<String> args) {
+  if (args.length != 2) {
+    print("Usage: decompress input output");
     return;
   }
 
-  var inFile = new File(options.arguments[0]);
-  var outFile = new File(options.arguments[1]);
+  var inFile = new File(args[0]);
+  var outFile = new File(args[1]);
 
   var input = new LZMA.InStream(inFile.readAsBytesSync());
   var output = new LZMA.OutStream();
