@@ -30,7 +30,7 @@ library lzma;
 
 import "dart:math" as math show min, max, pow;
 
-import "src/fixnum/fixnum.dart";
+import "package:fixnum/fixnum.dart";
 
 part "src/base.dart";
 part "src/lz.dart";

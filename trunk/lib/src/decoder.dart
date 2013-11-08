@@ -116,7 +116,7 @@ class Decoder2 {
     var symbol = 1;
 
     do {
-      var matchBit = (matchByte >> 7) & 1;
+      int matchBit = (matchByte >> 7) & 1;
       matchByte <<= 1;
 
       var bit = rangeDecoder.decodeBit(_decoders, ((1 + matchBit) << 8) + symbol);

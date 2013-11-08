@@ -92,7 +92,7 @@ class Encoder2 {
       var bit = (symbol >> i) & 1;
       var state = context;
       if (same) {
-        var matchBit = (matchByte >> i) & 1;
+        int matchBit = (matchByte >> i) & 1;
         state += (1 + matchBit) << 8;
         same = (matchBit == bit);
       }
@@ -107,7 +107,7 @@ class Encoder2 {
     var i = 7;
     if (matchMode) {
       for (; i >= 0; -- i) {
-        var matchBit = (matchByte >> i) & 1;
+        int matchBit = (matchByte >> i) & 1;
         var bit = (symbol >> i) & 1;
         price += RangeEncoder.getPrice(_encoders[((1 + matchBit) << 8) + context], bit);
         context = (context << 1) | bit;
@@ -863,7 +863,7 @@ class Encoder {
       var startLen = 2;
 
       for (var repIndex = 0; repIndex < Base.kNumRepDistances; ++ repIndex) {
-        var lenTest = _matchFinder.getMatchLen(0 - 1, reps[repIndex], numAvailableBytes);
+        int lenTest = _matchFinder.getMatchLen(0 - 1, reps[repIndex], numAvailableBytes);
         if (lenTest < 2) {
           continue;
         }
@@ -943,7 +943,7 @@ class Encoder {
           offs += 2;
         }
 
-        for (var lenTest = startLen; ; ++ lenTest) {
+        for (int lenTest = startLen; ; ++ lenTest) {
           var curBack = _matchDistances[offs + 1];
           var curAndLenPrice = normalMatchPrice + _getPosLenPrice(curBack, lenTest, posState);
           var optimum = _optimum[cur + lenTest];

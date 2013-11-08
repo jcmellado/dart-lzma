@@ -75,7 +75,7 @@ class OutStream implements _OutStream<int> {
 
   void writeBlock(List<int> buffer, int offset, int size) {
     if (size > 0) {
-      data.addAll(buffer.sublist(offset, offset + size - 1));
+      data.addAll(buffer.sublist(offset, offset + size));
     }
   }
 
