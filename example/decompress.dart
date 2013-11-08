@@ -23,16 +23,14 @@ THE SOFTWARE.
 import "dart:io";
 import "package:lzma/lzma.dart" as LZMA;
 
-void main() {
-  var options = new Options();
-
-  if (options.arguments.length != 2) {
+void main(List<String> args) {
+  if (args.length != 2) {
     print("Usage: decompress input output");
     return;
   }
 
-  var inFile = new File(options.arguments[0]);
-  var outFile = new File(options.arguments[1]);
+  var inFile = new File(args[0]);
+  var outFile = new File(args[1]);
 
   var input = new LZMA.InStream(inFile.readAsBytesSync());
   var output = new LZMA.OutStream();

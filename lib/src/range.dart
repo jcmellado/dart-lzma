@@ -76,11 +76,11 @@ class RangeDecoder {
   }
 
   int decodeBit(List<int> probs, int index) {
-    var prob = probs[index];
+    int prob = probs[index];
 
     var newBound = ((_range >>_kNumBitModelTotalBits) & 0x1fffff) * prob;
 
-    if ((new int32.fromInt(_code) ^ 0x80000000) < (new int32.fromInt(newBound) ^ 0x80000000)) {
+    if ((new Int32(_code) ^ 0x80000000) < (new Int32(newBound) ^ 0x80000000)) {
       _range = newBound;
       probs[index] = prob + ((_kBitModelTotal - prob) >> _kNumMoveBits);
 
@@ -119,7 +119,7 @@ class RangeEncoder {
 
   OutStream _stream;
 
-  int64 _low;
+  Int64 _low;
   int _range;
   int _cacheSize;
   int _cache;
@@ -136,7 +136,7 @@ class RangeEncoder {
 
   void init() {
     _position = 0;
-    _low = int64.ZERO;
+    _low = Int64.ZERO;
     _range = -1;
     _cacheSize = 1;
     _cache = 0;
@@ -192,7 +192,7 @@ class RangeEncoder {
   }
 
   void encode(List<int> probs, int index, int symbol) {
-    var prob = probs[index];
+    int prob = probs[index];
 
     var newBound = ((_range >> _kNumBitModelTotalBits) & 0x1fffff) * prob;
 
@@ -200,7 +200,7 @@ class RangeEncoder {
       _range = newBound;
       probs[index] = prob + ((_kBitModelTotal - prob) >> _kNumMoveBits);
     } else {
-      _low += new int64.fromInt(0xffffffff) & newBound;
+      _low += new Int64(0xffffffff) & newBound;
       _range -= newBound;
       probs[index] = prob - (prob >> _kNumMoveBits);
     }
@@ -231,7 +231,7 @@ class RangeEncoder {
   }
 
   static int getPrice(int prob, int symbol) =>
-    _probPrices[((new int32.fromInt(prob - symbol) ^ new int32.fromInt(-symbol)).toInt()
+    _probPrices[((new Int32(prob - symbol) ^ new Int32(-symbol)).toInt()
         & (_kBitModelTotal - 1)) >> _kNumMoveReducingBits];
 
   static int getPrice0(int prob) =>

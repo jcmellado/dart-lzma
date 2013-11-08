@@ -429,7 +429,7 @@ class BinTree extends InWindow {
         break;
       }
 
-      var delta = _pos - curMatch;
+      int delta = _pos - curMatch;
       var cyclicPos = ((delta <= _cyclicBufferPos) ?
         (_cyclicBufferPos - delta) :
         (_cyclicBufferPos - delta + _cyclicBufferSize)) << 1;
@@ -491,7 +491,7 @@ class BinTree extends InWindow {
       var hashValue;
 
       if (_hashArray) {
-        var temp = (new int32.fromInt(_crcTable[_bufferBase[cur] & 0xff]) ^ (_bufferBase[cur + 1] & 0xff)).toInt();
+        var temp = (new Int32(_crcTable[_bufferBase[cur] & 0xff]) ^ (_bufferBase[cur + 1] & 0xff)).toInt();
         var hash2Value = temp & (_kHash2Size - 1);
         _hash[hash2Value] = _pos;
         temp ^= (_bufferBase[cur + 2] & 0xff) << 8;
@@ -499,7 +499,7 @@ class BinTree extends InWindow {
         _hash[_kHash3Offset + hash3Value] = _pos;
         hashValue = (temp ^ (_crcTable[_bufferBase[cur + 3] & 0xff] << 5)) & _hashMask;
       } else {
-        hashValue = (new int32.fromInt(_bufferBase[cur] & 0xff) ^ ((_bufferBase[cur + 1] & 0xff) << 8)).toInt();
+        hashValue = (new Int32(_bufferBase[cur] & 0xff) ^ ((_bufferBase[cur + 1] & 0xff) << 8)).toInt();
       }
 
       var curMatch = _hash[_kFixHashSize + hashValue];
@@ -517,7 +517,7 @@ class BinTree extends InWindow {
           break;
         }
 
-        var delta = _pos - curMatch;
+        int delta = _pos - curMatch;
         var cyclicPos = ((delta <= _cyclicBufferPos) ?
           (_cyclicBufferPos - delta) :
           (_cyclicBufferPos - delta + _cyclicBufferSize)) << 1;
