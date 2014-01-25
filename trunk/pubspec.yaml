@@ -19,13 +19,13 @@
 # THE SOFTWARE.
 
 name: lzma
-version: 0.2.1
+version: 0.3.0
 author: Juan Mellado <jcmellado@gmail.com>
 homepage: http://code.google.com/p/dart-lzma/
 description: LZMA compression library.
 
 environment:
-  sdk: ">=0.8.10+6 <2.0.0"
+  sdk: ">=1.1.1"
 
 dependencies:
-  fixnum: ">=0.9.0 <0.10.0"
+  fixnum: ">=0.9.0"
