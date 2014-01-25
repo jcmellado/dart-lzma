@@ -2,7 +2,7 @@
 
 The source code is a manual translation from the original Java version found on the [LZMA SDK](http://www.7-zip.org/sdk.html).
 
-## How to use?
+## How to use it?
 
 If you want to compress data then just call to the `compress` function:
 
