@@ -223,7 +223,7 @@ class InWindow {
     var pby = _bufferOffset + _pos + index;
 
     var i = 0;
-    for (; (i < limit) && (_bufferBase[pby + i] == _bufferBase[pby + i - distance]); ++ i);
+    for (; (i < limit) && (_bufferBase[pby + i] == _bufferBase[pby + i - distance]); ++ i) {}
     return i;
   }
 
@@ -345,7 +345,7 @@ class BinTree extends InWindow {
   }
 
   int getMatches(List<int> distances) {
-    var lenLimit;
+    int lenLimit;
 
     if ((_pos + _matchMaxLen) <= _streamPos) {
       lenLimit = _matchMaxLen;
@@ -361,7 +361,7 @@ class BinTree extends InWindow {
     var matchMinPos = _pos > _cyclicBufferSize ? _pos - _cyclicBufferSize : 0;
     var cur = _bufferOffset + _pos;
     var maxLen = _kStartMaxLen;
-    var hashValue, hash2Value = 0, hash3Value = 0;
+    int hashValue, hash2Value = 0, hash3Value = 0;
 
     if (_hashArray) {
       var temp =  (_crcTable[_bufferBase[cur] & 0xff]) ^ (_bufferBase[cur + 1] & 0xff);
@@ -474,7 +474,7 @@ class BinTree extends InWindow {
 
   void skip(int num) {
     do {
-      var lenLimit;
+      int lenLimit;
       if ((_pos + _matchMaxLen) <= _streamPos) {
         lenLimit = _matchMaxLen;
       } else {
@@ -488,7 +488,7 @@ class BinTree extends InWindow {
       var matchMinPos = (_pos > _cyclicBufferSize) ? (_pos - _cyclicBufferSize) : 0;
       var cur = _bufferOffset + _pos;
 
-      var hashValue;
+      int hashValue;
 
       if (_hashArray) {
         var temp = (new Int32(_crcTable[_bufferBase[cur] & 0xff]) ^ (_bufferBase[cur + 1] & 0xff)).toInt();

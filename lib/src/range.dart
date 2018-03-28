@@ -35,8 +35,8 @@ class RangeDecoder {
   static const int _kBitModelTotal = 1 << _kNumBitModelTotalBits;
   static const int _kNumMoveBits = 5;
 
-  var _range;
-  var _code;
+  int _range;
+  int _code;
 
   InStream _stream;
 
@@ -210,7 +210,7 @@ class RangeEncoder {
     }
   }
 
-  static List<int> _probPrices = _buildProbPrices();
+  static final List<int> _probPrices = _buildProbPrices();
 
   static List<int> _buildProbPrices() {
     var probPrices = new List<int>(_kBitModelTotal >> _kNumMoveReducingBits);

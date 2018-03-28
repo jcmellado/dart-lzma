@@ -281,7 +281,7 @@ class Decoder {
 
         ++ nowPos64;
       } else {
-        var len;
+        int len;
         if (_rangeDecoder.decodeBit(_isRepDecoders, state) == 1) {
           len = 0;
           if (_rangeDecoder.decodeBit(_isRepG0Decoders, state) == 0) {
@@ -290,7 +290,7 @@ class Decoder {
               len = 1;
             }
           } else {
-            var distance;
+            int distance;
             if (_rangeDecoder.decodeBit(_isRepG1Decoders, state) == 0) {
               distance = rep1;
             } else {

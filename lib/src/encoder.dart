@@ -289,7 +289,7 @@ class Encoder {
 
   static const _kIfinityPrice = 0xfffffff;
 
-  static List<int> _fastPos = _buildFastPos();
+  static final List<int> _fastPos = _buildFastPos();
 
   static List<int> _buildFastPos() {
     var fastPos = new List<int>(0x800);
@@ -346,7 +346,7 @@ class Encoder {
   static const int _kNumOpts = 0x1000;
 
   final List<Optimal> _optimum = new List<Optimal>(_kNumOpts);
-  BinTree _matchFinder = null;
+  BinTree _matchFinder;
   final RangeEncoder _rangeEncoder = new RangeEncoder();
 
   final List<int> _isMatch = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
@@ -491,7 +491,7 @@ class Encoder {
         RangeEncoder.getPrice0(_isRep0Long[(state << Base.kNumPosStatesBitsMax) + posState]);
 
   int _getPureRepPrice(int repIndex, int state, int posState) {
-    var price;
+    int price;
     if (repIndex == 0) {
       price = RangeEncoder.getPrice0(_isRepG0[state]);
       price += RangeEncoder.getPrice1(_isRep0Long[(state << Base.kNumPosStatesBitsMax) + posState]);
@@ -513,8 +513,8 @@ class Encoder {
   }
 
   int _getPosLenPrice(int pos, int len, int posState) {
-    var price;
-    var lenToPosState = Base.getLenToPosState(len);
+    int price;
+    int lenToPosState = Base.getLenToPosState(len);
     if (pos < Base.kNumFullDistances) {
       price = _distancesPrices[(lenToPosState * Base.kNumFullDistances) + pos];
     } else {
@@ -566,7 +566,7 @@ class Encoder {
     }
     _optimumCurrentIndex = _optimumEndIndex = 0;
 
-    var lenMain, numDistancePairs;
+    int lenMain, numDistancePairs;
     if (!_longestMatchWasFound) {
       lenMain = _readMatchDistances();
     } else {
@@ -584,8 +584,8 @@ class Encoder {
       numAvailableBytes = Base.kMatchMaxLen;
     }
 
-    var repMaxIndex = 0;
-    var i;
+    int repMaxIndex = 0;
+    int i;
     for (i = 0; i < Base.kNumRepDistances; ++ i) {
       reps[i] = _repDistances[i];
       repLens[i] = _matchFinder.getMatchLen(0 - 1, reps[i], Base.kMatchMaxLen);
@@ -713,8 +713,8 @@ class Encoder {
         return _backward(cur);
       }
       ++ position;
-      var posPrev = _optimum[cur].posPrev;
-      var state;
+      int posPrev = _optimum[cur].posPrev;
+      int state;
       if (_optimum[cur].prev1IsChar) {
         -- posPrev;
         if (_optimum[cur].prev2) {
@@ -738,7 +738,7 @@ class Encoder {
           state = Base.stateUpdateChar(state);
         }
       } else {
-        var pos;
+        int pos;
         if (_optimum[cur].prev1IsChar && _optimum[cur].prev2) {
           posPrev = _optimum[cur].posPrev2;
           pos = _optimum[cur].backPrev2;
@@ -928,7 +928,7 @@ class Encoder {
 
       if (newLen > numAvailableBytes) {
         newLen = numAvailableBytes;
-        for (numDistancePairs = 0; newLen > _matchDistances[numDistancePairs]; numDistancePairs += 2);
+        for (numDistancePairs = 0; newLen > _matchDistances[numDistancePairs]; numDistancePairs += 2) {}
         _matchDistances[numDistancePairs] = newLen;
         numDistancePairs += 2;
       }
@@ -999,11 +999,6 @@ class Encoder {
         }
       }
     }
-  }
-
-  bool _changePair(int smallDist, int bigDist) {
-    const kDif = 7;
-    return (smallDist < (1 << (32 - kDif)) && bigDist >= (smallDist << kDif));
   }
 
   void _writeEndMarker(int posState) {
@@ -1264,10 +1259,10 @@ class Encoder {
     }
 
     for (var lenToPosState = 0; lenToPosState < Base.kNumLenToPosStates; ++ lenToPosState) {
-      var posSlot;
-      var encoder = _posSlotEncoder[lenToPosState];
+      int posSlot;
+      final encoder = _posSlotEncoder[lenToPosState];
 
-      var st = lenToPosState << Base.kNumPosSlotBits;
+      final st = lenToPosState << Base.kNumPosSlotBits;
       for (posSlot = 0; posSlot < _distTableSize; ++ posSlot) {
         _posSlotPrices[st + posSlot] = encoder.getPrice(posSlot);
       }
@@ -1275,8 +1270,8 @@ class Encoder {
         _posSlotPrices[st + posSlot] += ((((posSlot >> 1) - 1) - Base.kNumAlignBits) << RangeEncoder._kNumBitPriceShiftBits);
       }
 
-      var st2 = lenToPosState * Base.kNumFullDistances;
-      var i;
+      final st2 = lenToPosState * Base.kNumFullDistances;
+      int i;
       for (i = 0; i < Base.kStartPosModelIndex; ++ i) {
         _distancesPrices[st2 + i] = _posSlotPrices[st + i];
       }
@@ -1300,8 +1295,8 @@ class Encoder {
     }
     _dictionarySize = dictionarySize;
 
-    var dicLogSize;
-    for (dicLogSize = 0; dictionarySize > (1 << dicLogSize); ++ dicLogSize);
+    int dicLogSize;
+    for (dicLogSize = 0; dictionarySize > (1 << dicLogSize); ++ dicLogSize) {}
     _distTableSize = dicLogSize * 2;
 
     return true;

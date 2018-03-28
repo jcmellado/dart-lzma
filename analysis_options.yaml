@@ -30,7 +30,6 @@ linter:
      - library_names
      - library_prefixes
      - non_constant_identifier_names
-     - omit_local_variable_types
      - prefer_final_fields
      - prefer_is_not_empty
      - prefer_typing_uninitialized_variables
