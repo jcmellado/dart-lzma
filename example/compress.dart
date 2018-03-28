@@ -20,22 +20,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-import "dart:io";
-import "package:lzma/lzma.dart" as LZMA;
+import 'dart:io';
+import 'package:lzma/lzma.dart' as lzma;
 
 void main(List<String> args) {
   if (args.length != 2) {
-    print("Usage: compress input output");
+    print('Usage: compress input output');
     return;
   }
 
-  var inFile = new File(args[0]);
-  var outFile = new File(args[1]);
+  final inFile = new File(args[0]);
+  final outFile = new File(args[1]);
 
-  var input = new LZMA.InStream(inFile.readAsBytesSync());
-  var output = new LZMA.OutStream();
+  final input = new lzma.InStream(inFile.readAsBytesSync());
+  final output = new lzma.OutStream();
 
-  LZMA.compress(input, output);
+  lzma.compress(input, output);
 
   outFile.writeAsBytesSync(output.data);
 }
