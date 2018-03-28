@@ -1,6 +1,6 @@
 #### 1.0.0-dev
 
-
+  * **BREAKING CHANGE**: Replacing public API with `LzmaCodec` and `lzma` instance.
 
 #### 0.3.0 - Jan 25, 2014
 

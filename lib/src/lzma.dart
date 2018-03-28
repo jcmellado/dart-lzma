@@ -20,22 +20,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-import 'dart:io';
-import 'package:lzma/lzma.dart' as lzma;
+/*
+References:
+- "LZMA SDK" by Igor Pavlov
+  http://www.7-zip.org/sdk.html
+*/
 
-void main(List<String> args) {
-  if (args.length != 2) {
-    print('Usage: decompress input output');
-    return;
-  }
+library lzma;
 
-  final inFile = new File(args[0]);
-  final outFile = new File(args[1]);
+import 'dart:math' as math show min, max, pow;
 
-  final input = new lzma.InStream(inFile.readAsBytesSync());
-  final output = new lzma.OutStream();
+import 'package:fixnum/fixnum.dart';
 
-  lzma.decompress(input, output);
-
-  outFile.writeAsBytesSync(output.data);
-}
+part 'base.dart';
+part 'lz.dart';
+part 'range.dart';
+part 'encoder.dart';
+part 'decoder.dart';
+part 'stream.dart';

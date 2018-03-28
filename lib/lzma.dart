@@ -1,40 +1,39 @@
-/*
-Copyright (c) 2012 Juan Mellado
+import 'dart:convert';
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+import 'src/lzma.dart' as lzma_impl;
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+const LzmaCodec lzma = const LzmaCodec();
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-*/
+class LzmaCodec extends Codec<List<int>, List<int>> {
+  const LzmaCodec();
 
-/*
-References:
-- "LZMA SDK" by Igor Pavlov
-  http://www.7-zip.org/sdk.html
-*/
+  @override
+  Converter<List<int>, List<int>> get encoder => const LzmaEncoder();
 
-library lzma;
+  @override
+  Converter<List<int>, List<int>> get decoder => const LzmaDecoder();
+}
 
-import "dart:math" as math show min, max, pow;
+class LzmaEncoder extends Converter<List<int>, List<int>> {
+  const LzmaEncoder();
 
-import "package:fixnum/fixnum.dart";
+  @override
+  List<int> convert(List<int> input) {
+    final inStream = new lzma_impl.InStream(input);
+    final outStream = new lzma_impl.OutStream();
+    lzma_impl.compress(inStream, outStream);
+    return outStream.data;
+  }
+}
 
-part "src/base.dart";
-part "src/lz.dart";
-part "src/range.dart";
-part "src/encoder.dart";
-part "src/decoder.dart";
-part "src/stream.dart";
+class LzmaDecoder extends Converter<List<int>, List<int>> {
+  const LzmaDecoder();
+
+  @override
+  List<int> convert(List<int> encoded) {
+    final inStream = new lzma_impl.InStream(encoded);
+    final outStream = new lzma_impl.OutStream();
+    lzma_impl.decompress(inStream, outStream);
+    return outStream.data;
+  }
+}
