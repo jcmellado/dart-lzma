@@ -1,4 +1,4 @@
-#### 1.0.0-dev
+#### 0.4.0-dev
 
   * **BREAKING CHANGE**: Replacing public API with `LzmaCodec` and `lzma` instance.
 
