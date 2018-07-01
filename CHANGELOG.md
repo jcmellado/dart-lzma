@@ -1,3 +1,7 @@
+#### 0.4.0+1
+
+  * Updated test dependency -> dev_dependency.
+
 #### 0.4.0
 
   * **BREAKING CHANGE**: Replacing public API with `LzmaCodec` and `lzma` instance.
