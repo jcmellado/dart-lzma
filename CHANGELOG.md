@@ -1,3 +1,7 @@
+#### 0.4.0+2
+
+  * Release for Dart2.
+
 #### 0.4.0+1
 
   * Updated test dependency -> dev_dependency.
