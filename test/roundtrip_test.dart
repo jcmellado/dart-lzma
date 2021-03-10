@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 
 import 'package:lzma/lzma.dart';
 
-main() {
+void main() {
   group('rountrip encoding and decoding', () {
     Future runTest(List<int> input) async {
       final encoded = lzma.encode(input);
@@ -15,16 +15,16 @@ main() {
     }
 
     test('same values', () {
-      for (int i = 0; i <= 255; i += 17) {
-        final input = new List.filled(4096, i);
+      for (var i = 0; i <= 255; i += 17) {
+        final input = List.filled(4096, i);
         runTest(input);
       }
     });
 
     test('random values', () {
-      final random = new math.Random(9538475);
-      for (int i = 0; i < 16; i++) {
-        final input = new List.generate(4096, (i) => random.nextInt(256));
+      final random = math.Random(9538475);
+      for (var i = 0; i < 16; i++) {
+        final input = List.generate(4096, (i) => random.nextInt(256));
         runTest(input);
       }
     });
