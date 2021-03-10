@@ -1,3 +1,7 @@
+#### 1.0.0
+
+* Release for Dart 2.12 with nullsafty
+
 #### 0.4.0+2
 
   * Release for Dart2.

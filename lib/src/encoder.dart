@@ -38,31 +38,29 @@ class Params {
   bool eos = false;
 }
 
-void compress(InStream inStream, OutStream outStream, [Params params]) {
-  var encoder = new Encoder();
+void compress(InStream inStream, OutStream outStream, [Params? params]) {
+  final encoder = Encoder();
 
-  if (params == null) {
-    params = new Params();
-  }
+  final usedParams = params ?? Params();
 
-  if (!encoder.setDictionarySize(1 << params.dictionarySize)) {
-    throw new Exception("Incorrect dictionary size");
+  if (!encoder.setDictionarySize(1 << usedParams.dictionarySize)) {
+    throw Exception('Incorrect dictionary size');
   }
-  if (!encoder.setNumFastBytes(params.fb)) {
-    throw new Exception("Incorrect -fb value");
+  if (!encoder.setNumFastBytes(usedParams.fb)) {
+    throw Exception('Incorrect -fb value');
   }
-  if (!encoder.setMatchFinder(params.matchFinder)) {
-    throw new Exception("Incorrect -mf value");
+  if (!encoder.setMatchFinder(usedParams.matchFinder)) {
+    throw Exception('Incorrect -mf value');
   }
-  if (!encoder.setLcLpPb(params.lc, params.lp, params.pb)) {
-    throw new Exception("Incorrect -lc or -lp or -pb value");
+  if (!encoder.setLcLpPb(usedParams.lc, usedParams.lp, usedParams.pb)) {
+    throw Exception('Incorrect -lc or -lp or -pb value');
   }
-  encoder.setEndMarkerMode(params.eos);
+  encoder
+    ..setEndMarkerMode(usedParams.eos)
+    ..writeCoderProperties(outStream);
 
-  encoder.writeCoderProperties(outStream);
-
-  var fileSize = params.eos ? -1 : inStream.length();
-  for (var i = 0; i < 8; ++ i) {
+  final fileSize = usedParams.eos ? -1 : inStream.length();
+  for (var i = 0; i < 8; ++i) {
     outStream.write((fileSize >> (8 * i)) & 0xff);
   }
 
@@ -70,7 +68,7 @@ void compress(InStream inStream, OutStream outStream, [Params params]) {
 }
 
 class Encoder2 {
-  final List<int> _encoders = new List<int>(0x300);
+  final List<int> _encoders = List<int>.filled(0x300, 0);
 
   void init() {
     RangeEncoder.initBitModels(_encoders);
@@ -78,8 +76,8 @@ class Encoder2 {
 
   void encode(RangeEncoder rangeEncoder, int symbol) {
     var context = 1;
-    for (var i = 7; i >= 0; -- i) {
-      var bit = (symbol >> i) & 1;
+    for (var i = 7; i >= 0; --i) {
+      final bit = (symbol >> i) & 1;
       rangeEncoder.encode(_encoders, context, bit);
       context = (context << 1) | bit;
     }
@@ -88,11 +86,11 @@ class Encoder2 {
   void encodeMatched(RangeEncoder rangeEncoder, int matchByte, int symbol) {
     var context = 1;
     var same = true;
-    for (var i = 7; i >= 0; -- i) {
-      var bit = (symbol >> i) & 1;
+    for (var i = 7; i >= 0; --i) {
+      final bit = (symbol >> i) & 1;
       var state = context;
       if (same) {
-        int matchBit = (matchByte >> i) & 1;
+        final matchBit = (matchByte >> i) & 1;
         state += (1 + matchBit) << 8;
         same = (matchBit == bit);
       }
@@ -106,19 +104,20 @@ class Encoder2 {
     var context = 1;
     var i = 7;
     if (matchMode) {
-      for (; i >= 0; -- i) {
-        int matchBit = (matchByte >> i) & 1;
-        var bit = (symbol >> i) & 1;
-        price += RangeEncoder.getPrice(_encoders[((1 + matchBit) << 8) + context], bit);
+      for (; i >= 0; --i) {
+        final matchBit = (matchByte >> i) & 1;
+        final bit = (symbol >> i) & 1;
+        price += RangeEncoder.getPrice(
+            _encoders[((1 + matchBit) << 8) + context], bit);
         context = (context << 1) | bit;
         if (matchBit != bit) {
-          -- i;
+          --i;
           break;
         }
       }
     }
-    for (; i >= 0; -- i) {
-      var bit = (symbol >> i) & 1;
+    for (; i >= 0; --i) {
+      final bit = (symbol >> i) & 1;
       price += RangeEncoder.getPrice(_encoders[context], bit);
       context = (context << 1) | bit;
     }
@@ -127,111 +126,116 @@ class Encoder2 {
 }
 
 class LiteralEncoder {
-  List<Encoder2> _coders;
-  int _numPrevBits;
-  int _numPosBits;
-  int _pPosMask;
+  List<Encoder2>? _coders;
+  int _numPrevBits = 0;
+  int _numPosBits = 0;
+  int _pPosMask = 0;
 
   void create(int numPosBits, int numPrevBits) {
-    if ((_coders != null) && (_numPrevBits == numPrevBits) && (_numPosBits == numPosBits)) {
+    if ((_coders != null) &&
+        (_numPrevBits == numPrevBits) &&
+        (_numPosBits == numPosBits)) {
       return;
     }
     _numPosBits = numPosBits;
     _pPosMask = (1 << numPosBits) - 1;
     _numPrevBits = numPrevBits;
-    var numStates = 1 << (_numPrevBits + _numPosBits);
-    _coders = new List<Encoder2>(numStates);
-    for (var i = 0; i < numStates; ++ i) {
-      _coders[i] = new Encoder2();
-    }
+    final numStates = 1 << (_numPrevBits + _numPosBits);
+    _coders = List<Encoder2>.generate(numStates, (_) => Encoder2());
   }
 
   void init() {
-    var numStates = 1 << (_numPrevBits + _numPosBits);
-    for (var i = 0; i < numStates;  ++ i) {
-      _coders[i].init();
+    final numStates = 1 << (_numPrevBits + _numPosBits);
+    for (var i = 0; i < numStates; ++i) {
+      _coders![i].init();
     }
   }
 
   Encoder2 getSubCoder(int pos, int prevByte) =>
-    _coders[((pos & _pPosMask) << _numPrevBits) + ((prevByte & 0xFF) >> (8 - _numPrevBits))];
+      _coders![((pos & _pPosMask) << _numPrevBits) +
+          ((prevByte & 0xFF) >> (8 - _numPrevBits))];
 }
 
 class LenEncoder {
-  final List<int> _choice = new List<int>(2);
-  final List<BitTreeEncoder> _lowCoder = new List<BitTreeEncoder>(Base.kNumPosStatesEncodingMax);
-  final List<BitTreeEncoder> _midCoder = new List<BitTreeEncoder>(Base.kNumPosStatesEncodingMax);
-  final BitTreeEncoder _highCoder = new BitTreeEncoder(Base.kNumHighLenBits);
+  final List<int> _choice = List<int>.filled(2, 0);
+  final List<BitTreeEncoder> _lowCoder = List<BitTreeEncoder>.generate(
+      Base.kNumPosStatesEncodingMax,
+      (_) => BitTreeEncoder(Base.kNumLowLenBits));
+  final List<BitTreeEncoder> _midCoder = List<BitTreeEncoder>.generate(
+      Base.kNumPosStatesEncodingMax,
+      (_) => BitTreeEncoder(Base.kNumMidLenBits));
+  final BitTreeEncoder _highCoder = BitTreeEncoder(Base.kNumHighLenBits);
 
-  LenEncoder() {
-    for (var posState = 0; posState < Base.kNumPosStatesEncodingMax; ++ posState) {
-      _lowCoder[posState] = new BitTreeEncoder(Base.kNumLowLenBits);
-      _midCoder[posState] = new BitTreeEncoder(Base.kNumMidLenBits);
-    }
-  }
+  LenEncoder();
 
   void init(int numPosStates) {
     RangeEncoder.initBitModels(_choice);
 
-    for (var posState = 0; posState < numPosStates; ++ posState) {
+    for (var posState = 0; posState < numPosStates; ++posState) {
       _lowCoder[posState].init();
       _midCoder[posState].init();
     }
     _highCoder.init();
   }
 
-   void encode(RangeEncoder rangeEncoder, int symbol, int posState) {
-    if (symbol < Base.kNumLowLenSymbols) {
+  void encode(RangeEncoder rangeEncoder, int symbol, int posState) {
+    var localSymbol = symbol;
+    if (localSymbol < Base.kNumLowLenSymbols) {
       rangeEncoder.encode(_choice, 0, 0);
-      _lowCoder[posState].encode(rangeEncoder, symbol);
+      _lowCoder[posState].encode(rangeEncoder, localSymbol);
     } else {
-      symbol -= Base.kNumLowLenSymbols;
+      localSymbol -= Base.kNumLowLenSymbols;
       rangeEncoder.encode(_choice, 0, 1);
-      if (symbol < Base.kNumMidLenSymbols) {
+      if (localSymbol < Base.kNumMidLenSymbols) {
         rangeEncoder.encode(_choice, 1, 0);
-        _midCoder[posState].encode(rangeEncoder, symbol);
+        _midCoder[posState].encode(rangeEncoder, localSymbol);
       } else {
         rangeEncoder.encode(_choice, 1, 1);
-        _highCoder.encode(rangeEncoder, symbol - Base.kNumMidLenSymbols);
+        _highCoder.encode(rangeEncoder, localSymbol - Base.kNumMidLenSymbols);
       }
     }
   }
 
   void setPrices(int posState, int numSymbols, List<int> prices, int st) {
-    var a0 = RangeEncoder.getPrice0(_choice[0]);
-    var a1 = RangeEncoder.getPrice1(_choice[0]);
-    var b0 = a1 + RangeEncoder.getPrice0(_choice[1]);
-    var b1 = a1 + RangeEncoder.getPrice1(_choice[1]);
+    final a0 = RangeEncoder.getPrice0(_choice[0]);
+    final a1 = RangeEncoder.getPrice1(_choice[0]);
+    final b0 = a1 + RangeEncoder.getPrice0(_choice[1]);
+    final b1 = a1 + RangeEncoder.getPrice1(_choice[1]);
     var i = 0;
-    for (i = 0; i < Base.kNumLowLenSymbols; ++ i) {
+    for (i = 0; i < Base.kNumLowLenSymbols; ++i) {
       if (i >= numSymbols) {
         return;
       }
       prices[st + i] = a0 + _lowCoder[posState].getPrice(i);
     }
-    for (; i < Base.kNumLowLenSymbols + Base.kNumMidLenSymbols; ++ i) {
+    for (; i < Base.kNumLowLenSymbols + Base.kNumMidLenSymbols; ++i) {
       if (i >= numSymbols) {
         return;
       }
-      prices[st + i] = b0 + _midCoder[posState].getPrice(i - Base.kNumLowLenSymbols);
+      prices[st + i] =
+          b0 + _midCoder[posState].getPrice(i - Base.kNumLowLenSymbols);
     }
     for (; i < numSymbols; i++) {
-      prices[st + i] = b1 + _highCoder.getPrice(i - Base.kNumLowLenSymbols - Base.kNumMidLenSymbols);
+      prices[st + i] = b1 +
+          _highCoder
+              .getPrice(i - Base.kNumLowLenSymbols - Base.kNumMidLenSymbols);
     }
   }
 }
 
 class LenPriceTableEncoder extends LenEncoder {
-  final List<int> _prices = new List<int>(Base.kNumLenSymbols<<Base.kNumPosStatesBitsEncodingMax);
-  int _tableSize;
-  final List<int> _counters = new List<int>(Base.kNumPosStatesEncodingMax);
+  final List<int> _prices = List<int>.filled(
+      Base.kNumLenSymbols << Base.kNumPosStatesBitsEncodingMax, 0);
+  int _tableSize = 0;
+  final List<int> _counters =
+      List<int>.filled(Base.kNumPosStatesEncodingMax, 0);
 
   void setTableSize(int tableSize) {
     _tableSize = tableSize;
   }
 
   int getPrice(int symbol, int posState) =>
-    _prices[posState * Base.kNumLenSymbols + symbol];
+      _prices[posState * Base.kNumLenSymbols + symbol];
 
   void updateTable(int posState) {
     setPrices(posState, _tableSize, _prices, posState * Base.kNumLenSymbols);
@@ -239,11 +243,12 @@ class LenPriceTableEncoder extends LenEncoder {
   }
 
   void updateTables(int numPosStates) {
-    for (var posState = 0; posState < numPosStates; ++ posState) {
+    for (var posState = 0; posState < numPosStates; ++posState) {
       updateTable(posState);
     }
   }
 
+  @override
   void encode(RangeEncoder rangeEncoder, int symbol, int posState) {
     super.encode(rangeEncoder, symbol, posState);
     if (--_counters[posState] == 0) {
@@ -253,22 +258,22 @@ class LenPriceTableEncoder extends LenEncoder {
 }
 
 class Optimal {
-  int state;
+  int state = 0;
 
-  bool prev1IsChar;
-  bool prev2;
+  bool prev1IsChar = false;
+  bool prev2 = false;
 
-  int posPrev2;
-  int backPrev2;
+  int posPrev2 = 0;
+  int backPrev2 = 0;
 
-  int price;
-  int posPrev;
-  int backPrev;
+  int price = 0;
+  int posPrev = 0;
+  int backPrev = 0;
 
-  int backs0;
-  int backs1;
-  int backs2;
-  int backs3;
+  int backs0 = 0;
+  int backs1 = 0;
+  int backs2 = 0;
+  int backs3 = 0;
 
   void makeAsChar() {
     backPrev = -1;
@@ -292,15 +297,15 @@ class Encoder {
   static final List<int> _fastPos = _buildFastPos();
 
   static List<int> _buildFastPos() {
-    var fastPos = new List<int>(0x800);
+    final fastPos = List<int>.filled(0x800, 0);
 
-    var kFastSlots = 22;
+    const kFastSlots = 22;
     var c = 2;
     fastPos[0] = 0;
     fastPos[1] = 1;
-    for (var slotFast = 2; slotFast < kFastSlots; ++ slotFast) {
-      var k = 1 << ((slotFast >> 1) - 1);
-      for (var j = 0; j < k; ++ j, ++ c) {
+    for (var slotFast = 2; slotFast < kFastSlots; ++slotFast) {
+      final k = 1 << ((slotFast >> 1) - 1);
+      for (var j = 0; j < k; ++j, ++c) {
         fastPos[c] = slotFast;
       }
     }
@@ -329,13 +334,13 @@ class Encoder {
   }
 
   int _state = Base.stateInit;
-  int _previousByte;
-  final List<int> _repDistances = new List<int>(Base.kNumRepDistances);
+  int _previousByte = 0;
+  final List<int> _repDistances = List<int>.filled(Base.kNumRepDistances, 0);
 
   void _baseInit() {
     _state = Base.stateInit;
     _previousByte = 0;
-    for (var i = 0; i < Base.kNumRepDistances; ++ i) {
+    for (var i = 0; i < Base.kNumRepDistances; ++i) {
       _repDistances[i] = 0;
     }
   }
@@ -345,44 +350,52 @@ class Encoder {
 
   static const int _kNumOpts = 0x1000;
 
-  final List<Optimal> _optimum = new List<Optimal>(_kNumOpts);
-  BinTree _matchFinder;
-  final RangeEncoder _rangeEncoder = new RangeEncoder();
+  final List<Optimal> _optimum =
+      List<Optimal>.generate(_kNumOpts, (_) => Optimal());
+  BinTree? _matchFinder;
+  final RangeEncoder _rangeEncoder = RangeEncoder();
 
-  final List<int> _isMatch = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
-  final List<int> _isRep = new List<int>(Base.kNumStates);
-  final List<int> _isRepG0 = new List<int>(Base.kNumStates);
-  final List<int> _isRepG1 = new List<int>(Base.kNumStates);
-  final List<int> _isRepG2 = new List<int>(Base.kNumStates);
-  final List<int> _isRep0Long = new List<int>(Base.kNumStates << Base.kNumPosStatesBitsMax);
+  final List<int> _isMatch =
+      List<int>.filled(Base.kNumStates << Base.kNumPosStatesBitsMax, 0);
+  final List<int> _isRep = List<int>.filled(Base.kNumStates, 0);
+  final List<int> _isRepG0 = List<int>.filled(Base.kNumStates, 0);
+  final List<int> _isRepG1 = List<int>.filled(Base.kNumStates, 0);
+  final List<int> _isRepG2 = List<int>.filled(Base.kNumStates, 0);
+  final List<int> _isRep0Long =
+      List<int>.filled(Base.kNumStates << Base.kNumPosStatesBitsMax, 0);
 
-  final List<BitTreeEncoder> _posSlotEncoder = new List<BitTreeEncoder>(Base.kNumLenToPosStates);
+  final List<BitTreeEncoder> _posSlotEncoder = List<BitTreeEncoder>.generate(
+      Base.kNumLenToPosStates, (_) => BitTreeEncoder(Base.kNumPosSlotBits));
 
-  final List<int> _posEncoders = new List<int>(Base.kNumFullDistances - Base.kEndPosModelIndex);
-  final BitTreeEncoder _posAlignEncoder = new BitTreeEncoder(Base.kNumAlignBits);
+  final List<int> _posEncoders =
+      List<int>.filled(Base.kNumFullDistances - Base.kEndPosModelIndex, 0);
+  final BitTreeEncoder _posAlignEncoder = BitTreeEncoder(Base.kNumAlignBits);
 
-  final LenPriceTableEncoder _lenEncoder = new LenPriceTableEncoder();
-  final LenPriceTableEncoder _repMatchLenEncoder = new LenPriceTableEncoder();
+  final LenPriceTableEncoder _lenEncoder = LenPriceTableEncoder();
+  final LenPriceTableEncoder _repMatchLenEncoder = LenPriceTableEncoder();
 
-  final LiteralEncoder _literalEncoder = new LiteralEncoder();
+  final LiteralEncoder _literalEncoder = LiteralEncoder();
 
-  final List<int> _matchDistances = new List<int>(Base.kMatchMaxLen * 2 + 2);
+  final List<int> _matchDistances =
+      List<int>.filled(Base.kMatchMaxLen * 2 + 2, 0);
 
   int _numFastBytes = _kNumFastBytesDefault;
-  int _longestMatchLength;
-  int _numDistancePairs;
+  int _longestMatchLength = 0;
+  int _numDistancePairs = 0;
 
-  int _additionalOffset;
+  int _additionalOffset = 0;
 
-  int _optimumEndIndex;
-  int _optimumCurrentIndex;
+  int _optimumEndIndex = 0;
+  int _optimumCurrentIndex = 0;
 
-  bool _longestMatchWasFound;
+  bool _longestMatchWasFound = false;
 
-  final List<int> _posSlotPrices = new List<int>(1 << (Base.kNumPosSlotBits + Base.kNumLenToPosStatesBits));
-  final List<int> _distancesPrices = new List<int>(Base.kNumFullDistances << Base.kNumLenToPosStatesBits);
-  final List<int> _alignPrices = new List<int>(Base.kAlignTableSize);
-  int _alignPriceCount;
+  final List<int> _posSlotPrices = List<int>.filled(
+      1 << (Base.kNumPosSlotBits + Base.kNumLenToPosStatesBits), 0);
+  final List<int> _distancesPrices = List<int>.filled(
+      Base.kNumFullDistances << Base.kNumLenToPosStatesBits, 0);
+  final List<int> _alignPrices = List<int>.filled(Base.kAlignTableSize, 0);
+  int _alignPriceCount = 0;
 
   int _distTableSize = _kDefaultDictionaryLogSize * 2;
 
@@ -395,9 +408,9 @@ class Encoder {
   int _dictionarySizePrev = -1;
   int _numFastBytesPrev = -1;
 
-  int _nowPos64;
-  bool _finished;
-  InStream _inStream;
+  int _nowPos64 = 0;
+  bool _finished = false;
+  InStream? _inStream;
 
   int _matchFinderType = 1;
   bool _writeEndMark = false;
@@ -406,7 +419,7 @@ class Encoder {
 
   void _create() {
     if (_matchFinder == null) {
-      var bt = new BinTree();
+      final bt = BinTree();
       var numHashBytes = 4;
       if (_matchFinderType == EMatchFinderTypeBT2) {
         numHashBytes = 2;
@@ -416,21 +429,14 @@ class Encoder {
     }
     _literalEncoder.create(_numLiteralPosStateBits, _numLiteralContextBits);
 
-    if ((_dictionarySize == _dictionarySizePrev) && (_numFastBytesPrev == _numFastBytes)) {
+    if ((_dictionarySize == _dictionarySizePrev) &&
+        (_numFastBytesPrev == _numFastBytes)) {
       return;
     }
-    _matchFinder.create2(_dictionarySize, _kNumOpts, _numFastBytes, Base.kMatchMaxLen + 1);
+    _matchFinder!.create2(
+        _dictionarySize, _kNumOpts, _numFastBytes, Base.kMatchMaxLen + 1);
     _dictionarySizePrev = _dictionarySize;
     _numFastBytesPrev = _numFastBytes;
-  }
-
-  Encoder() {
-    for (var i = 0; i < _kNumOpts; ++ i) {
-      _optimum[i] = new Optimal();
-    }
-    for (var i = 0; i < Base.kNumLenToPosStates; ++ i) {
-      _posSlotEncoder[i] = new BitTreeEncoder(Base.kNumPosSlotBits);
-    }
   }
 
   void setWriteEndMarkerMode(bool writeEndMarker) {
@@ -450,7 +456,7 @@ class Encoder {
     RangeEncoder.initBitModels(_posEncoders);
 
     _literalEncoder.init();
-    for (var i = 0; i < Base.kNumLenToPosStates; ++ i) {
+    for (var i = 0; i < Base.kNumLenToPosStates; ++i) {
       _posSlotEncoder[i].init();
     }
 
@@ -467,34 +473,36 @@ class Encoder {
 
   int _readMatchDistances() {
     var lenRes = 0;
-    _numDistancePairs = _matchFinder.getMatches(_matchDistances);
+    _numDistancePairs = _matchFinder!.getMatches(_matchDistances);
     if (_numDistancePairs > 0) {
       lenRes = _matchDistances[_numDistancePairs - 2];
       if (lenRes == _numFastBytes) {
-        lenRes += _matchFinder.getMatchLen(lenRes - 1, _matchDistances[_numDistancePairs - 1],
-          Base.kMatchMaxLen - lenRes);
+        lenRes += _matchFinder!.getMatchLen(lenRes - 1,
+            _matchDistances[_numDistancePairs - 1], Base.kMatchMaxLen - lenRes);
       }
     }
-    ++ _additionalOffset;
+    ++_additionalOffset;
     return lenRes;
   }
 
   void _movePos(int num) {
     if (num > 0) {
-      _matchFinder.skip(num);
+      _matchFinder!.skip(num);
       _additionalOffset += num;
     }
   }
 
   int _getRepLen1Price(int state, int posState) =>
-    RangeEncoder.getPrice0(_isRepG0[state]) +
-        RangeEncoder.getPrice0(_isRep0Long[(state << Base.kNumPosStatesBitsMax) + posState]);
+      RangeEncoder.getPrice0(_isRepG0[state]) +
+      RangeEncoder.getPrice0(
+          _isRep0Long[(state << Base.kNumPosStatesBitsMax) + posState]);
 
   int _getPureRepPrice(int repIndex, int state, int posState) {
     int price;
     if (repIndex == 0) {
       price = RangeEncoder.getPrice0(_isRepG0[state]);
-      price += RangeEncoder.getPrice1(_isRep0Long[(state << Base.kNumPosStatesBitsMax) + posState]);
+      price += RangeEncoder.getPrice1(
+          _isRep0Long[(state << Base.kNumPosStatesBitsMax) + posState]);
     } else {
       price = RangeEncoder.getPrice1(_isRepG0[state]);
       if (repIndex == 1) {
@@ -508,23 +516,26 @@ class Encoder {
   }
 
   int _getRepPrice(int repIndex, int len, int state, int posState) {
-    var price = _repMatchLenEncoder.getPrice(len - Base.kMatchMinLen, posState);
+    final price =
+        _repMatchLenEncoder.getPrice(len - Base.kMatchMinLen, posState);
     return price + _getPureRepPrice(repIndex, state, posState);
   }
 
   int _getPosLenPrice(int pos, int len, int posState) {
     int price;
-    int lenToPosState = Base.getLenToPosState(len);
+    final lenToPosState = Base.getLenToPosState(len);
     if (pos < Base.kNumFullDistances) {
       price = _distancesPrices[(lenToPosState * Base.kNumFullDistances) + pos];
     } else {
-      price = _posSlotPrices[(lenToPosState << Base.kNumPosSlotBits) + _getPosSlot2(pos)] +
-        _alignPrices[pos & Base.kAlignMask];
+      price = _posSlotPrices[
+              (lenToPosState << Base.kNumPosSlotBits) + _getPosSlot2(pos)] +
+          _alignPrices[pos & Base.kAlignMask];
     }
     return price + _lenEncoder.getPrice(len - Base.kMatchMinLen, posState);
   }
 
-  int _backward(int cur) {
+  int _backward(int current) {
+    var cur = current;
     _optimumEndIndex = cur;
     var posMem = _optimum[cur].posPrev;
     var backMem = _optimum[cur].backPrev;
@@ -538,8 +549,8 @@ class Encoder {
           _optimum[posMem - 1].backPrev = _optimum[cur].backPrev2;
         }
       }
-      var posPrev = posMem;
-      var backCur = backMem;
+      final posPrev = posMem;
+      final backCur = backMem;
 
       backMem = _optimum[posPrev].backPrev;
       posMem = _optimum[posPrev].posPrev;
@@ -549,17 +560,18 @@ class Encoder {
       cur = posPrev;
     } while (cur > 0);
     backRes = _optimum[0].backPrev;
-    _optimumCurrentIndex = _optimum[0].posPrev;
-    return _optimumCurrentIndex;
+    return _optimumCurrentIndex = _optimum[0].posPrev;
   }
 
-  final List<int> reps = new List<int>(Base.kNumRepDistances);
-  final List<int> repLens = new List<int>(Base.kNumRepDistances);
-  int backRes;
+  final List<int> reps = List<int>.filled(Base.kNumRepDistances, 0);
+  final List<int> repLens = List<int>.filled(Base.kNumRepDistances, 0);
+  int backRes = 0;
 
-  int _getOptimum(int position) {
-    if (_optimumEndIndex != _optimumCurrentIndex){
-      var lenRes = _optimum[_optimumCurrentIndex].posPrev - _optimumCurrentIndex;
+  int _getOptimum(int pos) {
+    var position = pos;
+    if (_optimumEndIndex != _optimumCurrentIndex) {
+      final lenRes =
+          _optimum[_optimumCurrentIndex].posPrev - _optimumCurrentIndex;
       backRes = _optimum[_optimumCurrentIndex].backPrev;
       _optimumCurrentIndex = _optimum[_optimumCurrentIndex].posPrev;
       return lenRes;
@@ -575,7 +587,7 @@ class Encoder {
     }
     numDistancePairs = _numDistancePairs;
 
-    var numAvailableBytes = _matchFinder.getNumAvailableBytes() + 1;
+    var numAvailableBytes = _matchFinder!.getNumAvailableBytes() + 1;
     if (numAvailableBytes < 2) {
       backRes = -1;
       return 1;
@@ -584,18 +596,18 @@ class Encoder {
       numAvailableBytes = Base.kMatchMaxLen;
     }
 
-    int repMaxIndex = 0;
+    var repMaxIndex = 0;
     int i;
-    for (i = 0; i < Base.kNumRepDistances; ++ i) {
+    for (i = 0; i < Base.kNumRepDistances; ++i) {
       reps[i] = _repDistances[i];
-      repLens[i] = _matchFinder.getMatchLen(0 - 1, reps[i], Base.kMatchMaxLen);
+      repLens[i] = _matchFinder!.getMatchLen(0 - 1, reps[i], Base.kMatchMaxLen);
       if (repLens[i] > repLens[repMaxIndex]) {
         repMaxIndex = i;
       }
     }
     if (repLens[repMaxIndex] >= _numFastBytes) {
       backRes = repMaxIndex;
-      var lenRes = repLens[repMaxIndex];
+      final lenRes = repLens[repMaxIndex];
       _movePos(lenRes - 1);
       return lenRes;
     }
@@ -606,8 +618,8 @@ class Encoder {
       return lenMain;
     }
 
-    var currentByte = _matchFinder.getIndexByte(0 - 1);
-    var matchByte = _matchFinder.getIndexByte(0 - _repDistances[0] - 1 - 1);
+    var currentByte = _matchFinder!.getIndexByte(0 - 1);
+    var matchByte = _matchFinder!.getIndexByte(0 - _repDistances[0] - 1 - 1);
 
     if (lenMain < 2 && currentByte != matchByte && repLens[repMaxIndex] < 2) {
       backRes = -1;
@@ -618,22 +630,27 @@ class Encoder {
 
     var posState = (position & _posStateMask);
 
-    _optimum[1].price = RangeEncoder.getPrice0(_isMatch[(_state << Base.kNumPosStatesBitsMax) + posState]) +
-        _literalEncoder.getSubCoder(position, _previousByte).getPrice(!Base.stateIsCharState(_state), matchByte, currentByte);
+    _optimum[1].price = RangeEncoder.getPrice0(
+            _isMatch[(_state << Base.kNumPosStatesBitsMax) + posState]) +
+        _literalEncoder
+            .getSubCoder(position, _previousByte)
+            .getPrice(!Base.stateIsCharState(_state), matchByte, currentByte);
     _optimum[1].makeAsChar();
 
-    var matchPrice = RangeEncoder.getPrice1(_isMatch[(_state << Base.kNumPosStatesBitsMax) + posState]);
+    var matchPrice = RangeEncoder.getPrice1(
+        _isMatch[(_state << Base.kNumPosStatesBitsMax) + posState]);
     var repMatchPrice = matchPrice + RangeEncoder.getPrice1(_isRep[_state]);
 
     if (matchByte == currentByte) {
-      var shortRepPrice = repMatchPrice + _getRepLen1Price(_state, posState);
+      final shortRepPrice = repMatchPrice + _getRepLen1Price(_state, posState);
       if (shortRepPrice < _optimum[1].price) {
         _optimum[1].price = shortRepPrice;
         _optimum[1].makeAsShortRep();
       }
     }
 
-    var lenEnd = lenMain >= repLens[repMaxIndex] ? lenMain : repLens[repMaxIndex];
+    var lenEnd =
+        lenMain >= repLens[repMaxIndex] ? lenMain : repLens[repMaxIndex];
 
     if (lenEnd < 2) {
       backRes = _optimum[1].backPrev;
@@ -652,21 +669,22 @@ class Encoder {
       _optimum[len--].price = _kIfinityPrice;
     } while (len >= 2);
 
-    for (i = 0; i < Base.kNumRepDistances; ++ i)
-    {
+    for (var i = 0; i < Base.kNumRepDistances; ++i) {
       var repLen = repLens[i];
       if (repLen < 2) {
         continue;
       }
-      var price = repMatchPrice + _getPureRepPrice(i, _state, posState);
+      final price = repMatchPrice + _getPureRepPrice(i, _state, posState);
       do {
-        var curAndLenPrice = price + _repMatchLenEncoder.getPrice(repLen - 2, posState);
-        var optimum = _optimum[repLen];
+        final curAndLenPrice =
+            price + _repMatchLenEncoder.getPrice(repLen - 2, posState);
+        final optimum = _optimum[repLen];
         if (curAndLenPrice < optimum.price) {
-          optimum.price = curAndLenPrice;
-          optimum.posPrev = 0;
-          optimum.backPrev = i;
-          optimum.prev1IsChar = false;
+          optimum
+            ..price = curAndLenPrice
+            ..posPrev = 0
+            ..backPrev = i
+            ..prev1IsChar = false;
         }
       } while (--repLen >= 2);
     }
@@ -679,15 +697,17 @@ class Encoder {
       while (len > _matchDistances[offs]) {
         offs += 2;
       }
-      for (; ; ++ len) {
-        var distance = _matchDistances[offs + 1];
-        var curAndLenPrice = normalMatchPrice + _getPosLenPrice(distance, len, posState);
-        var optimum = _optimum[len];
+      for (;; ++len) {
+        final distance = _matchDistances[offs + 1];
+        final curAndLenPrice =
+            normalMatchPrice + _getPosLenPrice(distance, len, posState);
+        final optimum = _optimum[len];
         if (curAndLenPrice < optimum.price) {
-          optimum.price = curAndLenPrice;
-          optimum.posPrev = 0;
-          optimum.backPrev = distance + Base.kNumRepDistances;
-          optimum.prev1IsChar = false;
+          optimum
+            ..price = curAndLenPrice
+            ..posPrev = 0
+            ..backPrev = distance + Base.kNumRepDistances
+            ..prev1IsChar = false;
         }
         if (len == _matchDistances[offs]) {
           offs += 2;
@@ -700,8 +720,9 @@ class Encoder {
 
     var cur = 0;
 
+    // ignore: literal_only_boolean_expressions
     while (true) {
-      ++ cur;
+      ++cur;
       if (cur == lenEnd) {
         return _backward(cur);
       }
@@ -712,11 +733,11 @@ class Encoder {
         _longestMatchWasFound = true;
         return _backward(cur);
       }
-      ++ position;
-      int posPrev = _optimum[cur].posPrev;
+      ++position;
+      var posPrev = _optimum[cur].posPrev;
       int state;
       if (_optimum[cur].prev1IsChar) {
-        -- posPrev;
+        --posPrev;
         if (_optimum[cur].prev2) {
           state = _optimum[_optimum[cur].posPrev2].state;
           if (_optimum[cur].backPrev2 < Base.kNumRepDistances) {
@@ -751,7 +772,7 @@ class Encoder {
             state = Base.stateUpdateMatch(state);
           }
         }
-        var opt = _optimum[posPrev];
+        final opt = _optimum[posPrev];
         if (pos < Base.kNumRepDistances) {
           if (pos == 0) {
             reps[0] = opt.backs0;
@@ -786,44 +807,51 @@ class Encoder {
       _optimum[cur].backs1 = reps[1];
       _optimum[cur].backs2 = reps[2];
       _optimum[cur].backs3 = reps[3];
-      var curPrice = _optimum[cur].price;
+      final curPrice = _optimum[cur].price;
 
-      currentByte = _matchFinder.getIndexByte(0 - 1);
-      matchByte = _matchFinder.getIndexByte(0 - reps[0] - 1 - 1);
+      currentByte = _matchFinder!.getIndexByte(0 - 1);
+      matchByte = _matchFinder!.getIndexByte(0 - reps[0] - 1 - 1);
 
       posState = (position & _posStateMask);
 
-      var curAnd1Price = curPrice +
-        RangeEncoder.getPrice0(_isMatch[(state << Base.kNumPosStatesBitsMax) + posState]) +
-        _literalEncoder.getSubCoder(position, _matchFinder.getIndexByte(0 - 2)).
-        getPrice(!Base.stateIsCharState(state), matchByte, currentByte);
+      final curAnd1Price = curPrice +
+          RangeEncoder.getPrice0(
+              _isMatch[(state << Base.kNumPosStatesBitsMax) + posState]) +
+          _literalEncoder
+              .getSubCoder(position, _matchFinder!.getIndexByte(0 - 2))
+              .getPrice(!Base.stateIsCharState(state), matchByte, currentByte);
 
-      var nextOptimum = _optimum[cur + 1];
+      final nextOptimum = _optimum[cur + 1];
 
       var nextIsChar = false;
       if (curAnd1Price < nextOptimum.price) {
-        nextOptimum.price = curAnd1Price;
-        nextOptimum.posPrev = cur;
-        nextOptimum.makeAsChar();
+        nextOptimum
+          ..price = curAnd1Price
+          ..posPrev = cur
+          ..makeAsChar();
         nextIsChar = true;
       }
 
-      matchPrice = curPrice + RangeEncoder.getPrice1(_isMatch[(state << Base.kNumPosStatesBitsMax) + posState]);
+      matchPrice = curPrice +
+          RangeEncoder.getPrice1(
+              _isMatch[(state << Base.kNumPosStatesBitsMax) + posState]);
       repMatchPrice = matchPrice + RangeEncoder.getPrice1(_isRep[state]);
 
       if (matchByte == currentByte &&
-        !(nextOptimum.posPrev < cur && nextOptimum.backPrev == 0)) {
-        var shortRepPrice = repMatchPrice + _getRepLen1Price(state, posState);
+          !(nextOptimum.posPrev < cur && nextOptimum.backPrev == 0)) {
+        final shortRepPrice = repMatchPrice + _getRepLen1Price(state, posState);
         if (shortRepPrice <= nextOptimum.price) {
-          nextOptimum.price = shortRepPrice;
-          nextOptimum.posPrev = cur;
-          nextOptimum.makeAsShortRep();
+          nextOptimum
+            ..price = shortRepPrice
+            ..posPrev = cur
+            ..makeAsShortRep();
           nextIsChar = true;
         }
       }
 
-      var numAvailableBytesFull = _matchFinder.getNumAvailableBytes() + 1;
-      numAvailableBytesFull = math.min(_kNumOpts - 1 - cur, numAvailableBytesFull);
+      var numAvailableBytesFull = _matchFinder!.getNumAvailableBytes() + 1;
+      numAvailableBytesFull =
+          math.min(_kNumOpts - 1 - cur, numAvailableBytesFull);
       numAvailableBytes = numAvailableBytesFull;
 
       if (numAvailableBytes < 2) {
@@ -833,55 +861,59 @@ class Encoder {
         numAvailableBytes = _numFastBytes;
       }
       if ((!nextIsChar) && (matchByte != currentByte)) {
-        var t = math.min(numAvailableBytesFull - 1, _numFastBytes);
-        var lenTest2 = _matchFinder.getMatchLen(0, reps[0], t);
+        final t = math.min(numAvailableBytesFull - 1, _numFastBytes);
+        final lenTest2 = _matchFinder!.getMatchLen(0, reps[0], t);
         if (lenTest2 >= 2) {
-          var state2 = Base.stateUpdateChar(state);
+          final state2 = Base.stateUpdateChar(state);
 
-          var posStateNext = (position + 1) & _posStateMask;
-          var nextRepMatchPrice = curAnd1Price +
-            RangeEncoder.getPrice1(_isMatch[(state2 << Base.kNumPosStatesBitsMax) + posStateNext]) +
-            RangeEncoder.getPrice1(_isRep[state2]);
+          final posStateNext = (position + 1) & _posStateMask;
+          final nextRepMatchPrice = curAnd1Price +
+              RangeEncoder.getPrice1(_isMatch[
+                  (state2 << Base.kNumPosStatesBitsMax) + posStateNext]) +
+              RangeEncoder.getPrice1(_isRep[state2]);
 
-          var offset = cur + 1 + lenTest2;
+          final offset = cur + 1 + lenTest2;
           while (lenEnd < offset) {
             _optimum[++lenEnd].price = _kIfinityPrice;
           }
-          var curAndLenPrice = nextRepMatchPrice + _getRepPrice(
-              0, lenTest2, state2, posStateNext);
-          var optimum = _optimum[offset];
+          final curAndLenPrice = nextRepMatchPrice +
+              _getRepPrice(0, lenTest2, state2, posStateNext);
+          final optimum = _optimum[offset];
           if (curAndLenPrice < optimum.price) {
-            optimum.price = curAndLenPrice;
-            optimum.posPrev = cur + 1;
-            optimum.backPrev = 0;
-            optimum.prev1IsChar = true;
-            optimum.prev2 = false;
+            optimum
+              ..price = curAndLenPrice
+              ..posPrev = cur + 1
+              ..backPrev = 0
+              ..prev1IsChar = true
+              ..prev2 = false;
           }
         }
       }
 
       var startLen = 2;
 
-      for (var repIndex = 0; repIndex < Base.kNumRepDistances; ++ repIndex) {
-        int lenTest = _matchFinder.getMatchLen(0 - 1, reps[repIndex], numAvailableBytes);
+      for (var repIndex = 0; repIndex < Base.kNumRepDistances; ++repIndex) {
+        var lenTest =
+            _matchFinder!.getMatchLen(0 - 1, reps[repIndex], numAvailableBytes);
         if (lenTest < 2) {
           continue;
         }
-        var lenTestTemp = lenTest;
+        final lenTestTemp = lenTest;
         do {
           while (lenEnd < cur + lenTest) {
-            _optimum[++ lenEnd].price = _kIfinityPrice;
+            _optimum[++lenEnd].price = _kIfinityPrice;
           }
-          var curAndLenPrice = repMatchPrice + _getRepPrice(repIndex, lenTest, state, posState);
-          var optimum = _optimum[cur + lenTest];
+          final curAndLenPrice =
+              repMatchPrice + _getRepPrice(repIndex, lenTest, state, posState);
+          final optimum = _optimum[cur + lenTest];
           if (curAndLenPrice < optimum.price) {
-            optimum.price = curAndLenPrice;
-            optimum.posPrev = cur;
-            optimum.backPrev = repIndex;
-            optimum.prev1IsChar = false;
+            optimum
+              ..price = curAndLenPrice
+              ..posPrev = cur
+              ..backPrev = repIndex
+              ..prev1IsChar = false;
           }
-        }
-        while (-- lenTest >= 2);
+        } while (--lenTest >= 2);
         lenTest = lenTestTemp;
 
         if (repIndex == 0) {
@@ -889,38 +921,50 @@ class Encoder {
         }
 
         if (lenTest < numAvailableBytesFull) {
-          var t = math.min(numAvailableBytesFull - 1 - lenTest, _numFastBytes);
-          var lenTest2 = _matchFinder.getMatchLen(lenTest, reps[repIndex], t);
+          final t =
+              math.min(numAvailableBytesFull - 1 - lenTest, _numFastBytes);
+          final lenTest2 =
+              _matchFinder!.getMatchLen(lenTest, reps[repIndex], t);
           if (lenTest2 >= 2) {
             var state2 = Base.stateUpdateRep(state);
 
             var posStateNext = (position + lenTest) & _posStateMask;
-            var curAndLenCharPrice =
-                repMatchPrice + _getRepPrice(repIndex, lenTest, state, posState) +
-                RangeEncoder.getPrice0(_isMatch[(state2 << Base.kNumPosStatesBitsMax) + posStateNext]) +
-                _literalEncoder.getSubCoder(position + lenTest,
-                _matchFinder.getIndexByte(lenTest - 1 - 1)).getPrice(true,
-                _matchFinder.getIndexByte(lenTest - 1 - (reps[repIndex] + 1)),
-                _matchFinder.getIndexByte(lenTest - 1));
+            final curAndLenCharPrice = repMatchPrice +
+                _getRepPrice(repIndex, lenTest, state, posState) +
+                RangeEncoder.getPrice0(_isMatch[
+                    (state2 << Base.kNumPosStatesBitsMax) + posStateNext]) +
+                _literalEncoder
+                    .getSubCoder(position + lenTest,
+                        _matchFinder!.getIndexByte(lenTest - 1 - 1))
+                    .getPrice(
+                        true,
+                        _matchFinder!
+                            .getIndexByte(lenTest - 1 - (reps[repIndex] + 1)),
+                        _matchFinder!.getIndexByte(lenTest - 1));
             state2 = Base.stateUpdateChar(state2);
             posStateNext = (position + lenTest + 1) & _posStateMask;
-            var nextMatchPrice = curAndLenCharPrice + RangeEncoder.getPrice1(_isMatch[(state2 << Base.kNumPosStatesBitsMax) + posStateNext]);
-            var nextRepMatchPrice = nextMatchPrice + RangeEncoder.getPrice1(_isRep[state2]);
+            final nextMatchPrice = curAndLenCharPrice +
+                RangeEncoder.getPrice1(_isMatch[
+                    (state2 << Base.kNumPosStatesBitsMax) + posStateNext]);
+            final nextRepMatchPrice =
+                nextMatchPrice + RangeEncoder.getPrice1(_isRep[state2]);
 
-            var offset = lenTest + 1 + lenTest2;
+            final offset = lenTest + 1 + lenTest2;
             while (lenEnd < cur + offset) {
               _optimum[++lenEnd].price = _kIfinityPrice;
             }
-            var curAndLenPrice = nextRepMatchPrice + _getRepPrice(0, lenTest2, state2, posStateNext);
-            var optimum = _optimum[cur + offset];
+            final curAndLenPrice = nextRepMatchPrice +
+                _getRepPrice(0, lenTest2, state2, posStateNext);
+            final optimum = _optimum[cur + offset];
             if (curAndLenPrice < optimum.price) {
-              optimum.price = curAndLenPrice;
-              optimum.posPrev = cur + lenTest + 1;
-              optimum.backPrev = 0;
-              optimum.prev1IsChar = true;
-              optimum.prev2 = true;
-              optimum.posPrev2 = cur;
-              optimum.backPrev2 = repIndex;
+              optimum
+                ..price = curAndLenPrice
+                ..posPrev = cur + lenTest + 1
+                ..backPrev = 0
+                ..prev1IsChar = true
+                ..prev2 = true
+                ..posPrev2 = cur
+                ..backPrev2 = repIndex;
             }
           }
         }
@@ -928,7 +972,9 @@ class Encoder {
 
       if (newLen > numAvailableBytes) {
         newLen = numAvailableBytes;
-        for (numDistancePairs = 0; newLen > _matchDistances[numDistancePairs]; numDistancePairs += 2) {}
+        for (numDistancePairs = 0;
+            newLen > _matchDistances[numDistancePairs];
+            numDistancePairs += 2) {}
         _matchDistances[numDistancePairs] = newLen;
         numDistancePairs += 2;
       }
@@ -943,51 +989,63 @@ class Encoder {
           offs += 2;
         }
 
-        for (int lenTest = startLen; ; ++ lenTest) {
-          var curBack = _matchDistances[offs + 1];
-          var curAndLenPrice = normalMatchPrice + _getPosLenPrice(curBack, lenTest, posState);
+        for (var lenTest = startLen;; ++lenTest) {
+          final curBack = _matchDistances[offs + 1];
+          var curAndLenPrice =
+              normalMatchPrice + _getPosLenPrice(curBack, lenTest, posState);
           var optimum = _optimum[cur + lenTest];
           if (curAndLenPrice < optimum.price) {
-            optimum.price = curAndLenPrice;
-            optimum.posPrev = cur;
-            optimum.backPrev = curBack + Base.kNumRepDistances;
-            optimum.prev1IsChar = false;
+            optimum
+              ..price = curAndLenPrice
+              ..posPrev = cur
+              ..backPrev = curBack + Base.kNumRepDistances
+              ..prev1IsChar = false;
           }
 
           if (lenTest == _matchDistances[offs]) {
             if (lenTest < numAvailableBytesFull) {
-              var t = math.min(numAvailableBytesFull - 1 - lenTest, _numFastBytes);
-              var lenTest2 = _matchFinder.getMatchLen(lenTest, curBack, t);
+              final t =
+                  math.min(numAvailableBytesFull - 1 - lenTest, _numFastBytes);
+              final lenTest2 = _matchFinder!.getMatchLen(lenTest, curBack, t);
               if (lenTest2 >= 2) {
                 var state2 = Base.stateUpdateMatch(state);
 
                 var posStateNext = (position + lenTest) & _posStateMask;
-                var curAndLenCharPrice = curAndLenPrice +
-                  RangeEncoder.getPrice0(_isMatch[(state2 << Base.kNumPosStatesBitsMax) + posStateNext]) +
-                  _literalEncoder.getSubCoder(position + lenTest,
-                  _matchFinder.getIndexByte(lenTest - 1 - 1)).
-                  getPrice(true,
-                  _matchFinder.getIndexByte(lenTest - (curBack + 1) - 1),
-                  _matchFinder.getIndexByte(lenTest - 1));
+                final curAndLenCharPrice = curAndLenPrice +
+                    RangeEncoder.getPrice0(_isMatch[
+                        (state2 << Base.kNumPosStatesBitsMax) + posStateNext]) +
+                    _literalEncoder
+                        .getSubCoder(position + lenTest,
+                            _matchFinder!.getIndexByte(lenTest - 1 - 1))
+                        .getPrice(
+                            true,
+                            _matchFinder!
+                                .getIndexByte(lenTest - (curBack + 1) - 1),
+                            _matchFinder!.getIndexByte(lenTest - 1));
                 state2 = Base.stateUpdateChar(state2);
                 posStateNext = (position + lenTest + 1) & _posStateMask;
-                var nextMatchPrice = curAndLenCharPrice + RangeEncoder.getPrice1(_isMatch[(state2 << Base.kNumPosStatesBitsMax) + posStateNext]);
-                var nextRepMatchPrice = nextMatchPrice + RangeEncoder.getPrice1(_isRep[state2]);
+                final nextMatchPrice = curAndLenCharPrice +
+                    RangeEncoder.getPrice1(_isMatch[
+                        (state2 << Base.kNumPosStatesBitsMax) + posStateNext]);
+                final nextRepMatchPrice =
+                    nextMatchPrice + RangeEncoder.getPrice1(_isRep[state2]);
 
-                var offset = lenTest + 1 + lenTest2;
+                final offset = lenTest + 1 + lenTest2;
                 while (lenEnd < cur + offset) {
                   _optimum[++lenEnd].price = _kIfinityPrice;
                 }
-                curAndLenPrice = nextRepMatchPrice + _getRepPrice(0, lenTest2, state2, posStateNext);
+                curAndLenPrice = nextRepMatchPrice +
+                    _getRepPrice(0, lenTest2, state2, posStateNext);
                 optimum = _optimum[cur + offset];
                 if (curAndLenPrice < optimum.price) {
-                  optimum.price = curAndLenPrice;
-                  optimum.posPrev = cur + lenTest + 1;
-                  optimum.backPrev = 0;
-                  optimum.prev1IsChar = true;
-                  optimum.prev2 = true;
-                  optimum.posPrev2 = cur;
-                  optimum.backPrev2 = curBack + Base.kNumRepDistances;
+                  optimum
+                    ..price = curAndLenPrice
+                    ..posPrev = cur + lenTest + 1
+                    ..backPrev = 0
+                    ..prev1IsChar = true
+                    ..prev2 = true
+                    ..posPrev2 = cur
+                    ..backPrev2 = curBack + Base.kNumRepDistances;
                 }
               }
             }
@@ -1006,25 +1064,28 @@ class Encoder {
       return;
     }
 
-    _rangeEncoder.encode(_isMatch, (_state << Base.kNumPosStatesBitsMax) + posState, 1);
-    _rangeEncoder.encode(_isRep, _state, 0);
+    _rangeEncoder
+      ..encode(_isMatch, (_state << Base.kNumPosStatesBitsMax) + posState, 1)
+      ..encode(_isRep, _state, 0);
     _state = Base.stateUpdateMatch(_state);
-    var len = Base.kMatchMinLen;
+    const len = Base.kMatchMinLen;
     _lenEncoder.encode(_rangeEncoder, len - Base.kMatchMinLen, posState);
-    var posSlot = (1 << Base.kNumPosSlotBits) - 1;
-    var lenToPosState = Base.getLenToPosState(len);
+    const posSlot = (1 << Base.kNumPosSlotBits) - 1;
+    final lenToPosState = Base.getLenToPosState(len);
     _posSlotEncoder[lenToPosState].encode(_rangeEncoder, posSlot);
-    var footerBits = 30;
-    var posReduced = (1 << footerBits) - 1;
-    _rangeEncoder.encodeDirectBits(posReduced >> Base.kNumAlignBits, footerBits - Base.kNumAlignBits);
+    const footerBits = 30;
+    const posReduced = (1 << footerBits) - 1;
+    _rangeEncoder.encodeDirectBits(
+        posReduced >> Base.kNumAlignBits, footerBits - Base.kNumAlignBits);
     _posAlignEncoder.reverseEncode(_rangeEncoder, posReduced & Base.kAlignMask);
   }
 
   void _flush(int nowPos) {
     _releaseMFStream();
     _writeEndMarker(nowPos & _posStateMask);
-    _rangeEncoder.flushData();
-    _rangeEncoder.flushStream();
+    _rangeEncoder
+      ..flushData()
+      ..flushStream();
   }
 
   void _codeOneBlock(List<int> inSize, List<int> outSize, List<bool> finished) {
@@ -1033,8 +1094,8 @@ class Encoder {
     finished[0] = true;
 
     if (_inStream != null) {
-      _matchFinder.setStream(_inStream);
-      _matchFinder.init();
+      _matchFinder!.setStream(_inStream!);
+      _matchFinder!.init();
       _needReleaseMFStream = true;
       _inStream = null;
     }
@@ -1044,38 +1105,43 @@ class Encoder {
     }
     _finished = true;
 
-    var progressPosValuePrev = _nowPos64;
+    final progressPosValuePrev = _nowPos64;
     if (_nowPos64 == 0) {
-      if (_matchFinder.getNumAvailableBytes() == 0) {
+      if (_matchFinder!.getNumAvailableBytes() == 0) {
         _flush(_nowPos64);
         return;
       }
 
       _readMatchDistances();
-      var posState = _nowPos64 & _posStateMask;
-      _rangeEncoder.encode(_isMatch, (_state << Base.kNumPosStatesBitsMax) + posState, 0);
+      final posState = _nowPos64 & _posStateMask;
+      _rangeEncoder.encode(
+          _isMatch, (_state << Base.kNumPosStatesBitsMax) + posState, 0);
       _state = Base.stateUpdateChar(_state);
-      var curByte = _matchFinder.getIndexByte(0 - _additionalOffset);
-      _literalEncoder.getSubCoder(_nowPos64, _previousByte).encode(_rangeEncoder, curByte);
+      final curByte = _matchFinder!.getIndexByte(0 - _additionalOffset);
+      _literalEncoder
+          .getSubCoder(_nowPos64, _previousByte)
+          .encode(_rangeEncoder, curByte);
       _previousByte = curByte;
-      -- _additionalOffset;
-      ++ _nowPos64;
+      --_additionalOffset;
+      ++_nowPos64;
     }
-    if (_matchFinder.getNumAvailableBytes() == 0) {
+    if (_matchFinder!.getNumAvailableBytes() == 0) {
       _flush(_nowPos64);
       return;
     }
+    // ignore: literal_only_boolean_expressions
     while (true) {
-      var len = _getOptimum(_nowPos64);
+      final len = _getOptimum(_nowPos64);
       var pos = backRes;
-      var posState = (_nowPos64) & _posStateMask;
-      var complexState = (_state << Base.kNumPosStatesBitsMax) + posState;
+      final posState = (_nowPos64) & _posStateMask;
+      final complexState = (_state << Base.kNumPosStatesBitsMax) + posState;
       if (len == 1 && pos == -1) {
         _rangeEncoder.encode(_isMatch, complexState, 0);
-        var curByte = _matchFinder.getIndexByte(0 - _additionalOffset);
-        var subCoder = _literalEncoder.getSubCoder(_nowPos64, _previousByte);
+        final curByte = _matchFinder!.getIndexByte(0 - _additionalOffset);
+        final subCoder = _literalEncoder.getSubCoder(_nowPos64, _previousByte);
         if (!Base.stateIsCharState(_state)) {
-          var matchByte = _matchFinder.getIndexByte(0 - _repDistances[0] - 1 - _additionalOffset);
+          final matchByte = _matchFinder!
+              .getIndexByte(0 - _repDistances[0] - 1 - _additionalOffset);
           subCoder.encodeMatched(_rangeEncoder, matchByte, curByte);
         } else {
           subCoder.encode(_rangeEncoder, curByte);
@@ -1098,19 +1164,21 @@ class Encoder {
             if (pos == 1) {
               _rangeEncoder.encode(_isRepG1, _state, 0);
             } else {
-              _rangeEncoder.encode(_isRepG1, _state, 1);
-              _rangeEncoder.encode(_isRepG2, _state, pos - 2);
+              _rangeEncoder
+                ..encode(_isRepG1, _state, 1)
+                ..encode(_isRepG2, _state, pos - 2);
             }
           }
           if (len == 1) {
             _state = Base.stateUpdateShortRep(_state);
           } else {
-            _repMatchLenEncoder.encode(_rangeEncoder, len - Base.kMatchMinLen, posState);
+            _repMatchLenEncoder.encode(
+                _rangeEncoder, len - Base.kMatchMinLen, posState);
             _state = Base.stateUpdateRep(_state);
           }
-          var distance = _repDistances[pos];
+          final distance = _repDistances[pos];
           if (pos != 0) {
-            for (var i = pos; i >= 1; -- i) {
+            for (var i = pos; i >= 1; --i) {
               _repDistances[i] = _repDistances[i - 1];
             }
             _repDistances[0] = distance;
@@ -1120,32 +1188,34 @@ class Encoder {
           _state = Base.stateUpdateMatch(_state);
           _lenEncoder.encode(_rangeEncoder, len - Base.kMatchMinLen, posState);
           pos -= Base.kNumRepDistances;
-          var posSlot = _getPosSlot(pos);
-          var lenToPosState = Base.getLenToPosState(len);
+          final posSlot = _getPosSlot(pos);
+          final lenToPosState = Base.getLenToPosState(len);
           _posSlotEncoder[lenToPosState].encode(_rangeEncoder, posSlot);
 
           if (posSlot >= Base.kStartPosModelIndex) {
-            var footerBits = (posSlot >> 1) - 1;
-            var baseVal = (2 | (posSlot & 1)) << footerBits;
-            var posReduced = pos - baseVal;
+            final footerBits = (posSlot >> 1) - 1;
+            final baseVal = (2 | (posSlot & 1)) << footerBits;
+            final posReduced = pos - baseVal;
 
             if (posSlot < Base.kEndPosModelIndex) {
-              BitTreeEncoder.reverseEncode2(_posEncoders,
-                  baseVal - posSlot - 1, _rangeEncoder, footerBits, posReduced);
+              BitTreeEncoder.reverseEncode2(_posEncoders, baseVal - posSlot - 1,
+                  _rangeEncoder, footerBits, posReduced);
             } else {
-              _rangeEncoder.encodeDirectBits(posReduced >> Base.kNumAlignBits, footerBits - Base.kNumAlignBits);
-              _posAlignEncoder.reverseEncode(_rangeEncoder, posReduced & Base.kAlignMask);
-              ++ _alignPriceCount;
+              _rangeEncoder.encodeDirectBits(posReduced >> Base.kNumAlignBits,
+                  footerBits - Base.kNumAlignBits);
+              _posAlignEncoder.reverseEncode(
+                  _rangeEncoder, posReduced & Base.kAlignMask);
+              ++_alignPriceCount;
             }
           }
-          var distance = pos;
-          for (var i = Base.kNumRepDistances - 1; i >= 1; -- i) {
+          final distance = pos;
+          for (var i = Base.kNumRepDistances - 1; i >= 1; --i) {
             _repDistances[i] = _repDistances[i - 1];
           }
           _repDistances[0] = distance;
-          ++ _matchPriceCount;
+          ++_matchPriceCount;
         }
-        _previousByte = _matchFinder.getIndexByte(len - 1 - _additionalOffset);
+        _previousByte = _matchFinder!.getIndexByte(len - 1 - _additionalOffset);
       }
       _additionalOffset -= len;
       _nowPos64 += len;
@@ -1158,7 +1228,7 @@ class Encoder {
         }
         inSize[0] = _nowPos64;
         outSize[0] = _rangeEncoder.getProcessedSizeAdd();
-        if (_matchFinder.getNumAvailableBytes() == 0) {
+        if (_matchFinder!.getNumAvailableBytes() == 0) {
           _flush(_nowPos64);
           return;
         }
@@ -1174,7 +1244,7 @@ class Encoder {
 
   void _releaseMFStream() {
     if (_matchFinder != null && _needReleaseMFStream) {
-      _matchFinder.releaseStream();
+      _matchFinder!.releaseStream();
       _needReleaseMFStream = false;
     }
   }
@@ -1192,7 +1262,8 @@ class Encoder {
     _releaseOutStream();
   }
 
-  void _setStreams(InStream inStream, OutStream outStream, int inSize, int outSize) {
+  void _setStreams(
+      InStream inStream, OutStream outStream, int inSize, int outSize) {
     _inStream = inStream;
     _finished = false;
 
@@ -1203,25 +1274,27 @@ class Encoder {
     _fillDistancesPrices();
     _fillAlignPrices();
 
-    _lenEncoder.setTableSize(_numFastBytes + 1 - Base.kMatchMinLen);
-    _lenEncoder.updateTables(1 << _posStateBits);
-    _repMatchLenEncoder.setTableSize(_numFastBytes + 1 - Base.kMatchMinLen);
-    _repMatchLenEncoder.updateTables(1 << _posStateBits);
+    _lenEncoder
+      ..setTableSize(_numFastBytes + 1 - Base.kMatchMinLen)
+      ..updateTables(1 << _posStateBits);
+    _repMatchLenEncoder
+      ..setTableSize(_numFastBytes + 1 - Base.kMatchMinLen)
+      ..updateTables(1 << _posStateBits);
 
     _nowPos64 = 0;
   }
 
-  final List<int> processedInSize = new List<int>(1);
-  final List<int> processedOutSize = new List<int>(1);
-  final List<bool> finished = new List<bool>(1);
+  final List<int> processedInSize = List<int>.filled(1, 0);
+  final List<int> processedOutSize = List<int>.filled(1, 0);
+  final List<bool> finished = List<bool>.filled(1, false);
 
-  void code(InStream inStream, OutStream outStream,
-      int inSize, int outSize) {
+  void code(InStream inStream, OutStream outStream, int inSize, int outSize) {
     _needReleaseMFStream = false;
 
     try {
       _setStreams(inStream, outStream, inSize, outSize);
 
+      // ignore: literal_only_boolean_expressions
       while (true) {
         _codeOneBlock(processedInSize, processedOutSize, finished);
         if (finished[0]) {
@@ -1234,69 +1307,78 @@ class Encoder {
   }
 
   void writeCoderProperties(OutStream outStream) {
-    final kPropSize = 5;
+    const kPropSize = 5;
 
-    var properties = new List<int>(kPropSize);
+    final properties = List<int>.filled(kPropSize, 0);
 
-    properties[0] = ((_posStateBits * 5 + _numLiteralPosStateBits) * 9) + _numLiteralContextBits;
-    for (var i = 0; i < 4; ++ i) {
+    properties[0] = ((_posStateBits * 5 + _numLiteralPosStateBits) * 9) +
+        _numLiteralContextBits;
+    for (var i = 0; i < 4; ++i) {
       properties[i + 1] = (_dictionarySize >> (8 * i)) & 0xff;
     }
 
     outStream.writeBlock(properties, 0, kPropSize);
   }
 
-  final List<int> tempPrices = new List<int>(Base.kNumFullDistances);
-  int _matchPriceCount;
+  final List<int> tempPrices = List<int>.filled(Base.kNumFullDistances, 0);
+  int _matchPriceCount = 0;
 
   void _fillDistancesPrices() {
-    for (var i = Base.kStartPosModelIndex; i < Base.kNumFullDistances; ++ i) {
-      var posSlot = _getPosSlot(i);
-      var footerBits = (posSlot >> 1) - 1;
-      var baseVal = (2 | (posSlot & 1)) << footerBits;
-      tempPrices[i] = BitTreeEncoder.reverseGetPrice2(_posEncoders,
-        baseVal - posSlot - 1, footerBits, i - baseVal);
+    for (var i = Base.kStartPosModelIndex; i < Base.kNumFullDistances; ++i) {
+      final posSlot = _getPosSlot(i);
+      final footerBits = (posSlot >> 1) - 1;
+      final baseVal = (2 | (posSlot & 1)) << footerBits;
+      tempPrices[i] = BitTreeEncoder.reverseGetPrice2(
+          _posEncoders, baseVal - posSlot - 1, footerBits, i - baseVal);
     }
 
-    for (var lenToPosState = 0; lenToPosState < Base.kNumLenToPosStates; ++ lenToPosState) {
+    for (var lenToPosState = 0;
+        lenToPosState < Base.kNumLenToPosStates;
+        ++lenToPosState) {
       int posSlot;
       final encoder = _posSlotEncoder[lenToPosState];
 
       final st = lenToPosState << Base.kNumPosSlotBits;
-      for (posSlot = 0; posSlot < _distTableSize; ++ posSlot) {
+      for (posSlot = 0; posSlot < _distTableSize; ++posSlot) {
         _posSlotPrices[st + posSlot] = encoder.getPrice(posSlot);
       }
-      for (posSlot = Base.kEndPosModelIndex; posSlot < _distTableSize; ++ posSlot) {
-        _posSlotPrices[st + posSlot] += ((((posSlot >> 1) - 1) - Base.kNumAlignBits) << RangeEncoder._kNumBitPriceShiftBits);
+      for (posSlot = Base.kEndPosModelIndex;
+          posSlot < _distTableSize;
+          ++posSlot) {
+        _posSlotPrices[st + posSlot] +=
+            ((((posSlot >> 1) - 1) - Base.kNumAlignBits) <<
+                RangeEncoder._kNumBitPriceShiftBits);
       }
 
       final st2 = lenToPosState * Base.kNumFullDistances;
       int i;
-      for (i = 0; i < Base.kStartPosModelIndex; ++ i) {
+      for (i = 0; i < Base.kStartPosModelIndex; ++i) {
         _distancesPrices[st2 + i] = _posSlotPrices[st + i];
       }
-      for (; i < Base.kNumFullDistances; ++ i) {
-        _distancesPrices[st2 + i] = _posSlotPrices[st + _getPosSlot(i)] + tempPrices[i];
+      for (; i < Base.kNumFullDistances; ++i) {
+        _distancesPrices[st2 + i] =
+            _posSlotPrices[st + _getPosSlot(i)] + tempPrices[i];
       }
     }
     _matchPriceCount = 0;
   }
 
   void _fillAlignPrices() {
-    for (var i = 0; i < Base.kAlignTableSize; ++ i) {
+    for (var i = 0; i < Base.kAlignTableSize; ++i) {
       _alignPrices[i] = _posAlignEncoder.reverseGetPrice(i);
     }
     _alignPriceCount = 0;
   }
 
   bool setDictionarySize(int dictionarySize) {
-    if ((dictionarySize < (1 << Base.kDicLogSizeMin)) || (dictionarySize > 0x20000000)) {
+    if ((dictionarySize < (1 << Base.kDicLogSizeMin)) ||
+        (dictionarySize > 0x20000000)) {
       return false;
     }
     _dictionarySize = dictionarySize;
 
     int dicLogSize;
-    for (dicLogSize = 0; dictionarySize > (1 << dicLogSize); ++ dicLogSize) {}
+    for (dicLogSize = 0; dictionarySize > (1 << dicLogSize); ++dicLogSize) {}
     _distTableSize = dicLogSize * 2;
 
     return true;
@@ -1315,7 +1397,7 @@ class Encoder {
       return false;
     }
 
-    var matchFinderIndexPrev = _matchFinderType;
+    final matchFinderIndexPrev = _matchFinderType;
     _matchFinderType = matchFinderIndex;
     if ((_matchFinder != null) && (matchFinderIndexPrev != _matchFinderType)) {
       _dictionarySizePrev = -1;
@@ -1326,9 +1408,12 @@ class Encoder {
   }
 
   bool setLcLpPb(int lc, int lp, int pb) {
-    if ((lp < 0) || (lp > Base.kNumLitPosStatesBitsEncodingMax) ||
-        (lc < 0) || (lc > Base.kNumLitContextBitsMax) ||
-        (pb < 0) || (pb > Base.kNumPosStatesBitsEncodingMax)) {
+    if ((lp < 0) ||
+        (lp > Base.kNumLitPosStatesBitsEncodingMax) ||
+        (lc < 0) ||
+        (lc > Base.kNumLitContextBitsMax) ||
+        (pb < 0) ||
+        (pb > Base.kNumPosStatesBitsEncodingMax)) {
       return false;
     }
 

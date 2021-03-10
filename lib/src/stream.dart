@@ -45,40 +45,46 @@ class InStream implements _InStream<int> {
 
   int _offset = 0;
 
+  @override
   int read() {
     if (_offset >= length()) {
       return -1;
     }
-    return _data[_offset ++];
+    return _data[_offset++];
   }
 
+  @override
   int readBlock(List<int> buffer, int offset, int size) {
     if (_offset >= length()) {
       return -1;
     }
-    var len = math.min(size, length() - _offset);
-    for (var i = 0; i < len; ++ i) {
-      buffer[offset ++] = _data[_offset ++];
+    var currentOffset = offset;
+    final len = math.min(size, length() - _offset);
+    for (var i = 0; i < len; ++i) {
+      buffer[currentOffset++] = _data[_offset++];
     }
     return len;
   }
 
+  @override
   int length() => _data.length;
 }
 
 class OutStream implements _OutStream<int> {
-  final List<int> data = new List<int>();
+  final List<int> data = <int>[];
 
+  @override
   void write(int value) {
     data.add(value);
   }
 
+  @override
   void writeBlock(List<int> buffer, int offset, int size) {
     if (size > 0) {
       data.addAll(buffer.sublist(offset, offset + size));
     }
   }
 
-  void flush() {
-  }
+  @override
+  void flush() {}
 }
