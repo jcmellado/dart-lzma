@@ -1,3 +1,7 @@
+#### 1.0.1
+
+* Release cleanup and updated documentation.
+
 #### 1.0.0
 
 * Release for Dart 2.12 with nullsafty
