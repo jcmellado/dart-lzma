@@ -1,7 +1,7 @@
 name: lzma
 version: 1.0.0
 homepage: https://github.com/jcmellado/dart-lzma
-description: LZMA compression library.
+description: LZMA compression library written in pure dart. Use this library to compress and decompress using the LZMA algorithm.
 
 environment:
   sdk: '>=2.12.0 <3.0.0'

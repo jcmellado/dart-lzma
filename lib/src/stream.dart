@@ -23,24 +23,32 @@ THE SOFTWARE.
 part of lzma;
 
 abstract class _InStream<T> {
+  /// Reads a single entity from the stream
   T read();
 
+  /// Reads up to the specified number of elements ([size]) from the stream and places it in the [buffer] starting at [offset]
   int readBlock(List<T> buffer, int offset, int size);
 
+  /// The number of bytes in the stream
   int length();
 }
 
 abstract class _OutStream<T> {
+  /// Write a single element to the stream
   void write(T value);
 
+  /// Writes [size] elements from [buffer] starting at [offset]
   void writeBlock(List<T> buffer, int offset, int size);
 
+  /// Flushes the stream to it's underlying medium
   void flush();
 }
 
+/// Input stream concept, used to read bytes
 class InStream implements _InStream<int> {
   final List<int> _data;
 
+  /// Constructor taking the list of bytes to read from
   InStream(this._data);
 
   int _offset = 0;
@@ -70,6 +78,7 @@ class InStream implements _InStream<int> {
   int length() => _data.length;
 }
 
+/// Output stream concept, used to write bytes
 class OutStream implements _OutStream<int> {
   final List<int> data = <int>[];
 

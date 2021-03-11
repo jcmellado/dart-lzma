@@ -1,7 +1,7 @@
 `package:lzma` is a port of LZMA compression algorithm to Dart.
 
 The source code is a manual translation from the original Java version found on
-the [LZMA SDK](http://www.7-zip.org/sdk.html).
+the [LZMA SDK](https://www.7-zip.org/sdk.html).
 
 ## How to use it?
 
